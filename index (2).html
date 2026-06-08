@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkedIn Outreach CRM</title>
+<style>
+  :root {
+    --bg: #f9f8f6; --surface: #ffffff; --surface2: #f2f1ee;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --text: #1a1917; --text2: #6b6a66; --text3: #9e9d99;
+    --radius: 10px; --radius-lg: 14px;
+    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --green: #3B6D11; --green-bg: #EAF3DE; --green-text: #27500A;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-text: #633806;
+    --purple: #534AB7; --purple-bg: #EEEDFE; --purple-text: #3C3489;
+    --gray-bg: #E8E7E3; --gray-text: #444441;
+    --red-bg: #FCEBEB; --red-text: #791F1F;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1917; --surface: #242320; --surface2: #2e2d2a;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --text: #f0ede8; --text2: #a09e99; --text3: #6b6a66;
+      --blue-bg: #0C2A4A; --blue-text: #85B7EB;
+      --green-bg: #1a2e09; --green-text: #97C459;
+      --amber-bg: #3d2405; --amber-text: #FAC775;
+      --purple-bg: #1e1a4a; --purple-text: #AFA9EC;
+      --gray-bg: #2e2d2a; --gray-text: #B4B2A9;
+      --red-bg: #3a1212; --red-text: #F09595;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; gap: 16px; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .topbar-left { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  .logo-icon { font-size: 18px; }
+  .logo-text { color: var(--text); }
+  .nav-menu { display: flex; gap: 4px; }
+  .nav-item { font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: var(--radius); border: none; background: transparent; color: var(--text2); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--text); color: var(--bg); }
+  .topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .btn { font-size: 13px; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: background 0.15s; white-space: nowrap; text-decoration: none; }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .btn.primary:hover { background: var(--blue-text); }
+  .btn.green { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn.green:hover { background: var(--green-text); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .btn.icon-only { padding: 5px 8px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.danger:hover { background: var(--red-bg); color: var(--red-text); border-color: var(--red-text); }
+  .btn.message-btn { background: var(--amber-bg); border-color: var(--amber-text); color: var(--amber-text); font-weight: 500; }
+  .btn.message-btn:hover { background: var(--amber-text); color: #fff; }
+
+  /* dirty (unsaved) indicator on Save button */
+  .save-wrap { display: flex; align-items: center; gap: 8px; }
+  .save-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); display: none; }
+  .save-dot.show { display: inline-block; }
+  .sync-status { font-size: 11px; color: var(--text3); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: border-color 0.15s; }
+  .stat:hover { border-color: var(--border2); }
+  .stat.active { border-color: var(--blue); background: var(--blue-bg); }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 600; }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.blue { color: var(--blue); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.purple { color: var(--purple); }
+  .stat-value.red { color: #A32D2D; }
+
+  .filters { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
+  .search { flex: 1; min-width: 160px; max-width: 260px; padding: 7px 12px; font-size: 13px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: inherit; }
+  .pill { font-size: 12px; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .pill:hover { border-color: var(--border2); color: var(--text); }
+  .pill.active { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+  .leads { display: flex; flex-direction: column; gap: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; transition: border-color 0.15s; }
+  .card:hover { border-color: var(--border2); }
+
+  .card-top { display: flex; align-items: flex-start; gap: 12px; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 600; }
+  .card-title { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .card-move { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .co-tag { font-size: 12px; padding: 3px 9px; border-radius: 6px; font-weight: 500; }
+  .co-old { background: var(--gray-bg); color: var(--gray-text); }
+  .co-new { background: var(--blue-bg); color: var(--blue-text); }
+  .co-size { font-size: 11px; color: var(--text3); }
+
+  .status-select { appearance: none; -webkit-appearance: none; border: none; border-radius: 999px; font-size: 11px; font-weight: 600; padding: 4px 12px; cursor: pointer; font-family: inherit; outline: none; }
+  .status-select:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .s-new { background: var(--gray-bg); color: var(--gray-text); }
+  .type-row { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .type-pill { font-size: 12px; padding: 5px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .type-pill:hover { border-color: var(--border2); color: var(--text); }
+  .type-pill.active { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .lt-direct { font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--green-bg); color: var(--green-text); font-weight: 500; }
+  .lt-partner { font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--purple-bg); color: var(--purple-text); font-weight: 500; }
+  .s-benaderen { background: var(--purple-bg); color: var(--purple-text); }
+  .s-messaged { background: var(--amber-bg); color: var(--amber-text); }
+  .s-lead { background: var(--blue-bg); color: var(--blue-text); }
+  .s-in-pipedrive { background: var(--blue-bg); color: var(--blue-text); }
+  .s-unqualified { background: var(--red-bg); color: var(--red-text); }
+  .s-not-interested { background: #FFE4D6; color: #8C3A00; }
+
+  .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+
+  .card-note { font-size: 12px; color: var(--text2); margin-top: 8px; padding: 8px 12px; background: var(--surface2); border-radius: var(--radius); line-height: 1.5; }
+  .card-actions { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .card-actions .spacer { flex: 1; }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border2); padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; font-weight: 500; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px 11px; font-size: 13px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: inherit; }
+  .field textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  .import-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--text); color: var(--bg); padding: 12px 16px; border-radius: var(--radius); font-size: 13px; display: flex; align-items: center; gap: 8px; z-index: 2000; animation: slideIn 0.3s ease; max-width: 320px; }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty { text-align: center; padding: 4rem 1rem; color: var(--text3); }
+  .empty i { font-size: 40px; display: block; margin-bottom: 12px; opacity: 0.4; }
+  .empty p { font-size: 14px; }
+
+  /* ── Key gate (lock screen) ───────────────────────────────────────────── */
+  .gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 5000; padding: 1.5rem; }
+  .gate-card { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 32px; width: 100%; max-width: 420px; }
+  .gate-card h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .gate-card p { font-size: 13px; color: var(--text2); line-height: 1.55; margin-bottom: 18px; }
+  .gate-card .field input { padding: 10px 12px; font-size: 14px; }
+  .gate-err { font-size: 12px; color: var(--red-text); background: var(--red-bg); padding: 8px 11px; border-radius: 8px; margin-top: 10px; display: none; }
+  .gate-err.show { display: block; }
+  .gate-note { font-size: 11px; color: var(--text3); margin-top: 14px; line-height: 1.5; }
+  .app-shell { display: none; }
+  .app-shell.ready { display: block; }
+  #env-toggle.test { background: var(--amber-bg); border-color: var(--amber-text); color: var(--amber-text); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ── KEY GATE: page is useless without the correct n8n key ───────────────── -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h1>🔐 LinkedIn Outreach CRM</h1>
+    <p>Voer je n8n API-sleutel in om je leads te laden. De sleutel blijft alleen in dit browser-tabblad (sessionStorage) en wordt gewist zodra je het tabblad sluit.</p>
+    <div class="field">
+      <label>n8n API-sleutel</label>
+      <input id="gate-key" type="password" placeholder="Plak hier je sleutel" autocomplete="off">
+    </div>
+    <button class="btn primary" id="gate-btn" style="width:100%;justify-content:center">Ontgrendelen &amp; leads laden</button>
+    <div class="gate-err" id="gate-err"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+      <span class="gate-note" id="gate-env-note" style="margin:0">Omgeving: ⚙️ Productie</span>
+      <button class="btn sm" id="gate-env-btn" type="button">Wissel omgeving</button>
+    </div>
+    <div class="gate-note">Geen data wordt opgeslagen in deze pagina. Alles komt live uit n8n (Google Sheets). Zonder de juiste sleutel is deze pagina leeg.</div>
+  </div>
+</div>
+
+<!-- ── APP (hidden until unlocked) ─────────────────────────────────────────── -->
+<div class="app-shell" id="app-shell">
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">
+        <span class="logo-icon">🎯</span>
+        <span class="logo-text">LinkedIn Outreach CRM</span>
+      </div>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-view="leads" onclick="switchView('leads')">Leads</button>
+        <button class="nav-item" data-view="messages" onclick="switchView('messages')">Berichten</button>
+      </nav>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn sm" id="env-toggle" onclick="toggleEnv()" title="Wissel tussen productie en test webhook">⚙️ Prod</button>
+      <div class="save-wrap">
+        <span class="sync-status" id="sync-status"></span>
+        <span class="save-dot" id="save-dot" title="Niet-opgeslagen wijzigingen"></span>
+        <button class="btn green" id="save-btn" onclick="syncToN8n()">💾 Opslaan</button>
+      </div>
+      <button class="btn" onclick="reloadFromN8n()">↻ Verversen</button>
+      <a id="salesnav-link" href="#" target="_blank" class="btn">💼 Naar Sales Navigator</a>
+      <button class="btn primary" onclick="openAdd()">➕ Toevoegen</button>
+      <button class="btn icon-only" title="Vergrendelen" onclick="lockAndReload()">🔒</button>
+    </div>
+  </div>
+
+  <div class="view view-leads active" id="view-leads">
+    <div class="stats" id="stats"></div>
+    <div class="type-row" id="type-row"></div>
+    <div class="filters">
+      <input class="search" type="text" id="search" placeholder="Zoek naam of bedrijf…" oninput="render()">
+    </div>
+    <div class="leads" id="leads"></div>
+  </div>
+
+  <div class="view view-messages" id="view-messages">
+    <div id="messages-content"></div>
+  </div>
+
+  <div id="modal"></div>
+  <div id="toasts"></div>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  CONFIG
+//  - No secrets in this file. The n8n key is entered by the user at runtime.
+//  - Two endpoints: production (default) and test. Toggle in the UI.
+//    These URLs are NOT secrets; they return nothing without the key.
+// ════════════════════════════════════════════════════════════════════════════
+const N8N_URLS = {
+  prod: 'https://n8n.dev.hoorayhr.io/webhook/56bc510a-38d4-410f-ab5c-41ca63e825f8',
+  test: 'https://n8n.dev.hoorayhr.io/webhook-test/56bc510a-38d4-410f-ab5c-41ca63e825f8'
+};
+
+// Optional: the saved Sales Navigator search URL. Left blank on purpose so no
+// session id / saved-search id ends up in a public repo. Paste yours after
+// deploy if you want the top-bar link to work, OR leave blank.
+const SALES_NAV_URL = '';
+
+// ── Session-only state (cleared when tab closes) ────────────────────────────
+const KEY_SS   = 'li_crm_n8n_key';      // sessionStorage: the n8n key
+const CACHE_SS = 'li_crm_cache_v1';     // sessionStorage: in-memory lead cache
+const TPL_SS   = 'li_crm_templates_v1'; // sessionStorage: templates cache
+const ENV_LS   = 'li_crm_env';          // localStorage: 'prod' | 'test' (not a secret)
+
+// Bridge for the Chrome extension: the extension's content script reads these
+// from the page so the user doesn't type the key twice. Only the key + env are
+// shared (not lead data). Cleared on lock.
+const KEY_BRIDGE = 'li_crm_bridge_key';
+const ENV_BRIDGE = 'li_crm_bridge_env';
+
+function getEnv() { return localStorage.getItem(ENV_LS) === 'test' ? 'test' : 'prod'; }
+function setEnv(env) {
+  localStorage.setItem(ENV_LS, env === 'test' ? 'test' : 'prod');
+  publishBridge();
+  updateEnvUI();
+}
+function currentWebhookUrl() { return N8N_URLS[getEnv()]; }
+
+// Publish key+env to localStorage so the extension content script can pick it up.
+function publishBridge() {
+  const k = getKey();
+  if (k) {
+    localStorage.setItem(KEY_BRIDGE, k);
+    localStorage.setItem(ENV_BRIDGE, getEnv());
+  }
+}
+function clearBridge() {
+  localStorage.removeItem(KEY_BRIDGE);
+  localStorage.removeItem(ENV_BRIDGE);
+}
+
+function toggleEnv() {
+  if (dirty && !confirm('Je hebt niet-opgeslagen wijzigingen. Wisselen van omgeving herlaadt de leads. Doorgaan?')) return;
+  setEnv(getEnv() === 'prod' ? 'test' : 'prod');
+  // re-pull from the newly selected environment
+  if (getKey()) reloadFromN8n();
+}
+function updateEnvUI() {
+  const btn = document.getElementById('env-toggle');
+  if (!btn) return;
+  const env = getEnv();
+  btn.textContent = env === 'test' ? '🧪 Test' : '⚙️ Prod';
+  btn.classList.toggle('test', env === 'test');
+  btn.title = env === 'test'
+    ? 'Nu: TEST webhook (webhook-test). Klik voor productie.'
+    : 'Nu: PRODUCTIE webhook. Klik voor test.';
+  const gn = document.getElementById('gate-env-note');
+  if (gn) gn.textContent = env === 'test' ? 'Omgeving: 🧪 Test' : 'Omgeving: ⚙️ Productie';
+}
+
+const DEFAULT_TEMPLATES = [
+  { id:'t1', name:'Warme felicitatie',
+    body:'Hoi {voornaam}, gefeliciteerd met je nieuwe rol bij {bedrijf}! 🎉\n\nHoe bevalt het tot nu toe? En misschien een vreemde vraag: hoe bevalt de HR-software die ze daar gebruiken? Altijd nieuwsgierig wat HR\'ers van hun tooling vinden.' },
+  { id:'t2', name:'Peer-nieuwsgierigheid',
+    body:'Hi {voornaam}, leuk om te zien dat je bij {bedrijf} bent gestart!\n\nBen benieuwd hoe je de overstap ervaart. Spreek veel HR\'ers die net switchen — vaak een mooi moment om met frisse blik naar processen en tools te kijken. Welke HR-software gebruiken jullie eigenlijk, en hoe bevalt het?' },
+  { id:'t3', name:'Zachte aanbieding',
+    body:'Hoi {voornaam}, zag je nieuwe stap bij {bedrijf} voorbijkomen — gefeliciteerd!\n\nToevallig met HoorayHR veel HR-stacks van binnen gezien. Als je in je eerste maanden tegen vragen aanloopt rond HR-software of processen, schiet gerust een berichtje. Soms scheelt het al om kort te sparren.' }
+];
+
+let leads = [];
+let templates = DEFAULT_TEMPLATES.slice();
+let dirty = false;           // unsaved changes flag
+let activeView = 'leads';
+let activeFilter = 'all';
+let activeLeadType = 'all';
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KEY MANAGEMENT
+// ════════════════════════════════════════════════════════════════════════════
+function getKey() { return sessionStorage.getItem(KEY_SS) || ''; }
+
+function lockAndReload() {
+  if (dirty && !confirm('Je hebt niet-opgeslagen wijzigingen. Toch vergrendelen?')) return;
+  sessionStorage.removeItem(KEY_SS);
+  sessionStorage.removeItem(CACHE_SS);
+  sessionStorage.removeItem(TPL_SS);
+  clearBridge();
+  location.reload();
+}
+
+document.getElementById('gate-btn').addEventListener('click', unlock);
+document.getElementById('gate-key').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+document.getElementById('gate-env-btn').addEventListener('click', function() {
+  setEnv(getEnv() === 'prod' ? 'test' : 'prod');
+});
+updateEnvUI();
+
+async function unlock() {
+  const key = document.getElementById('gate-key').value.trim();
+  const errEl = document.getElementById('gate-err');
+  errEl.classList.remove('show');
+  if (!key) { showGateError('Voer een sleutel in.'); return; }
+  const btn = document.getElementById('gate-btn');
+  btn.disabled = true; btn.textContent = '⏳ Verbinden…';
+  try {
+    const result = await n8nCall('list', {}, key);
+    // success → store key + cache, show app
+    sessionStorage.setItem(KEY_SS, key);
+    leads = normalizeLeads(result.leads || []);
+    if (Array.isArray(result.templates) && result.templates.length) templates = result.templates;
+    saveCache();
+    publishBridge();
+    showApp();
+  } catch (e) {
+    showGateError(e.message === '401' ? 'Ongeldige sleutel.' : ('Kon niet laden: ' + e.message));
+    btn.disabled = false; btn.textContent = 'Ontgrendelen & leads laden';
+  }
+}
+
+function showGateError(msg) {
+  const el = document.getElementById('gate-err');
+  el.textContent = msg; el.classList.add('show');
+}
+
+function showApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app-shell').classList.add('ready');
+  updateEnvUI();
+  const link = document.getElementById('salesnav-link');
+  if (SALES_NAV_URL) { link.href = SALES_NAV_URL; }
+  else { link.style.display = 'none'; }
+  render();
+}
+
+// On load: if a key already exists in this session (e.g. soft nav), use it
+(function boot() {
+  const k = getKey();
+  if (!k) return; // stay on gate
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(CACHE_SS) || 'null');
+    const tpl = JSON.parse(sessionStorage.getItem(TPL_SS) || 'null');
+    if (tpl) templates = tpl;
+    if (cached) { leads = cached; showApp(); reloadFromN8n(true); }
+    else { reloadFromN8n(); showApp(); }
+  } catch(e) {}
+})();
+
+// ════════════════════════════════════════════════════════════════════════════
+//  N8N TRANSPORT
+//  All AI / data actions go through n8n webhooks. Three actions:
+//    list  → returns { leads:[...], templates?:[...] }
+//    sync  → upserts the full lead set, returns { ok:true }
+//    (import is used by the Chrome extension, not here)
+// ════════════════════════════════════════════════════════════════════════════
+async function n8nCall(action, payload = {}, keyOverride) {
+  const key = keyOverride || getKey();
+  const resp = await fetch(currentWebhookUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': key },
+    body: JSON.stringify({ action, apiKey: key, ...payload })
+  });
+  if (resp.status === 401 || resp.status === 403) throw new Error('401');
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return resp.json();
+}
+
+async function reloadFromN8n(silent = false) {
+  if (!getKey()) return;
+  setSync('⏳ Laden…');
+  try {
+    const result = await n8nCall('list');
+    leads = normalizeLeads(result.leads || []);
+    if (Array.isArray(result.templates) && result.templates.length) templates = result.templates;
+    dirty = false; updateSaveUI();
+    saveCache();
+    render();
+    setSync('✓ Geladen');
+    if (!silent) toast('Leads geladen uit n8n');
+  } catch (e) {
+    setSync('⚠ Laadfout');
+    if (e.message === '401') { toast('Sleutel ongeldig — opnieuw inloggen', true); lockAndReload(); }
+    else toast('Laden mislukt: ' + e.message, true);
+  }
+}
+
+async function syncToN8n() {
+  if (!getKey()) return;
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; setSync('⏳ Opslaan…');
+  try {
+    await n8nCall('sync', { leads, templates });
+    dirty = false; updateSaveUI();
+    saveCache();
+    setSync('✓ Opgeslagen');
+    toast('Opgeslagen naar n8n / Google Sheets');
+  } catch (e) {
+    setSync('⚠ Opslaan mislukt');
+    toast('Opslaan mislukt: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setSync(txt) { document.getElementById('sync-status').textContent = txt; }
+
+// ── Cache (sessionStorage only — cleared when tab closes) ───────────────────
+function saveCache() {
+  try {
+    sessionStorage.setItem(CACHE_SS, JSON.stringify(leads));
+    sessionStorage.setItem(TPL_SS, JSON.stringify(templates));
+  } catch(e) {}
+}
+// Mark in-memory change; does NOT hit the network (batched until Save)
+function markDirty() { dirty = true; updateSaveUI(); saveCache(); }
+function updateSaveUI() {
+  document.getElementById('save-dot').classList.toggle('show', dirty);
+}
+window.addEventListener('beforeunload', function(e) {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+function normalizeLeads(arr) {
+  return (arr || []).map(l => ({
+    id: l.id || uid(),
+    name: l.name || 'Onbekend',
+    title: l.title || '',
+    oldCompany: l.oldCompany || '',
+    newCompany: l.newCompany || '',
+    size: l.size || '',
+    url: l.url || l.linkedinUrl || '',
+    status: ['new','benaderen','messaged','lead','in-pipedrive','unqualified','not-interested'].includes(l.status) ? l.status : 'new',
+    notes: l.notes || '',
+    manualType: l.manualType || null,
+    messagesSent: Array.isArray(l.messagesSent) ? l.messagesSent : []
+  }));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  VIEW SWITCH + HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+function switchView(v) {
+  activeView = v;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === v));
+  document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === 'view-' + v));
+  if (v === 'messages') renderMessagesView();
+}
+function fillTemplate(body, lead) {
+  const firstName = (lead.name||'').split(' ')[0];
+  return body.replace(/\{voornaam\}/g, firstName).replace(/\{bedrijf\}/g, lead.newCompany||'');
+}
+
+const AVATAR_COLORS = [
+  ['#B5D4F4','#042C53'],['#9FE1CB','#04342C'],['#FAC775','#412402'],
+  ['#F4C0D1','#4B1528'],['#C0DD97','#173404'],['#F0997B','#4A1B0C']
+];
+function avatarColor(name){let h=0;for(let c of name)h=(h*31+c.charCodeAt(0))%AVATAR_COLORS.length;return AVATAR_COLORS[h];}
+function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function uid(){return Date.now()+Math.random().toString(36).slice(2,6);}
+
+function setFilter(f){activeFilter=f;render();}
+function setLeadType(t){activeLeadType=t;render();}
+
+function getLeadType(lead) {
+  if (typeof lead === 'object' && lead !== null) {
+    if (lead.manualType === 'partner' || lead.manualType === 'direct') return lead.manualType;
+    return detectLeadType(lead.title);
+  }
+  return detectLeadType(lead);
+}
+function detectLeadType(title) {
+  const t = (title || '').toLowerCase();
+  const keywords = ['interim','freelance','freelancer','zzp',' ai ',' a.i.',' ai,',' ai.','/ai','ai/','(ai)','a.i '];
+  if (keywords.some(k => t.includes(k)) || t.startsWith('ai ') || t.startsWith('a.i.') || t.endsWith(' ai') || t.endsWith(' a.i.') || t === 'ai') return 'partner';
+  return 'direct';
+}
+function toggleLeadType(id) {
+  const lead = leads.find(l => l.id === id); if (!lead) return;
+  lead.manualType = getLeadType(lead) === 'partner' ? 'direct' : 'partner';
+  markDirty(); render();
+}
+function statusClass(s) {
+  return {new:'s-new',benaderen:'s-benaderen',messaged:'s-messaged',lead:'s-lead','in-pipedrive':'s-in-pipedrive',unqualified:'s-unqualified','not-interested':'s-not-interested'}[s] || 's-new';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════════════════════════════
+function renderTypeRow() {
+  const all = leads.length;
+  const direct = leads.filter(l => getLeadType(l) === 'direct').length;
+  const partner = leads.filter(l => getLeadType(l) === 'partner').length;
+  const types = [
+    { key:'all', label:'Alle types', count: all },
+    { key:'direct', label:'Direct lead', count: direct },
+    { key:'partner', label:'Partner lead', count: partner },
+  ];
+  document.getElementById('type-row').innerHTML = types.map(t =>
+    `<button class="type-pill${activeLeadType===t.key?' active':''}" onclick="setLeadType('${t.key}')">
+      ${t.label} <span style="opacity:0.6;font-size:11px">${t.count}</span>
+    </button>`).join('');
+}
+
+function renderStats() {
+  const typeFiltered = activeLeadType === 'all' ? leads : leads.filter(l => getLeadType(l) === activeLeadType);
+  const counts = {
+    all: typeFiltered.length,
+    new: typeFiltered.filter(l=>l.status==='new').length,
+    benaderen: typeFiltered.filter(l=>l.status==='benaderen').length,
+    messaged: typeFiltered.filter(l=>l.status==='messaged').length,
+    lead: typeFiltered.filter(l=>l.status==='lead').length,
+    inPipedrive: typeFiltered.filter(l=>l.status==='in-pipedrive').length,
+    unqualified: typeFiltered.filter(l=>l.status==='unqualified').length,
+    notInterested: typeFiltered.filter(l=>l.status==='not-interested').length,
+  };
+  const cards = [
+    { key:'all', label:'Alle leads', color:'', val: counts.all },
+    { key:'new', label:'Nieuw', color:'', val: counts.new },
+    { key:'benaderen', label:'Benaderen', color:'blue', val: counts.benaderen },
+    { key:'messaged', label:'Bericht gestuurd', color:'amber', val: counts.messaged },
+    { key:'lead', label:'Lead', color:'green', val: counts.lead },
+    { key:'in-pipedrive', label:'In Pipedrive', color:'blue', val: counts.inPipedrive },
+    { key:'unqualified', label:'Unqualified', color:'red', val: counts.unqualified },
+    { key:'not-interested', label:'Not interested', color:'', val: counts.notInterested },
+  ];
+  renderTypeRow();
+  document.getElementById('stats').innerHTML = cards.map(c => `
+    <div class="stat${activeFilter===c.key?' active':''}" onclick="setFilter('${c.key}')">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value${c.color?' '+c.color:''}">${c.val}</div>
+    </div>`).join('');
+}
+
+function render() {
+  if (!document.getElementById('app-shell').classList.contains('ready')) return;
+  renderStats();
+  const q = (document.getElementById('search')?.value||'').toLowerCase();
+  const filtered = leads.filter(l => {
+    const matchF = activeFilter==='all' || l.status===activeFilter;
+    const matchT = activeLeadType==='all' || getLeadType(l) === activeLeadType;
+    const matchQ = !q || l.name.toLowerCase().includes(q) || (l.newCompany||'').toLowerCase().includes(q) || (l.oldCompany||'').toLowerCase().includes(q);
+    return matchF && matchT && matchQ;
+  });
+  const el = document.getElementById('leads');
+  if (!filtered.length) { el.innerHTML=`<div class="empty">👥<p>Geen leads gevonden</p></div>`; return; }
+  el.innerHTML = filtered.map(l => {
+    const [bg,fg] = avatarColor(l.name);
+    return `
+    <div class="card" id="card-${l.id}">
+      <div class="card-top">
+        <div class="avatar" style="background:${bg};color:${fg}">${initials(l.name)}</div>
+        <div class="card-info">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <div class="card-name">${esc(l.name)}</div>
+            <span class="${getLeadType(l)==='partner'?'lt-partner':'lt-direct'}" onclick="toggleLeadType('${l.id}')" title="Klik om te wisselen" style="cursor:pointer;user-select:none">${getLeadType(l)==='partner'?'Partner lead':'Direct lead'}${l.manualType?' ✓':''}</span>
+          </div>
+          <div class="card-title">${esc(l.title)}</div>
+          <div class="card-move">
+            ${l.oldCompany?`<span class="co-tag co-old">${esc(l.oldCompany)}</span>→`:''}
+            <span class="co-tag co-new">${esc(l.newCompany||'?')}</span>
+            ${l.size?`<span class="co-size">${esc(l.size)} FTE</span>`:''}
+          </div>
+        </div>
+        <div class="card-right">
+          <select class="status-select ${statusClass(l.status)}" onchange="updateStatus('${l.id}',this)">
+            <option value="new" ${l.status==='new'?'selected':''}>Nieuw</option>
+            <option value="benaderen" ${l.status==='benaderen'?'selected':''}>Benaderen</option>
+            <option value="messaged" ${l.status==='messaged'?'selected':''}>Bericht gestuurd</option>
+            <option value="lead" ${l.status==='lead'?'selected':''}>Lead</option>
+            <option value="in-pipedrive" ${l.status==='in-pipedrive'?'selected':''}>In Pipedrive</option>
+            <option value="unqualified" ${l.status==='unqualified'?'selected':''}>Unqualified</option>
+            <option value="not-interested" ${l.status==='not-interested'?'selected':''}>Not interested</option>
+          </select>
+        </div>
+      </div>
+      ${l.notes ? `<div class="card-note">📝 ${esc(l.notes)}</div>` : ''}
+      <div class="card-actions">
+        ${['new','benaderen'].includes(l.status) ? `<button class="btn sm message-btn" onclick="markMessaged('${l.id}')">📤 Bericht gestuurd</button>` : ''}
+        <a href="${esc(l.url||'#')}" target="_blank" class="btn sm">💼 LinkedIn</a>
+        <div class="spacer"></div>
+        <button class="btn sm icon-only" onclick="editLead('${l.id}')">✏️</button>
+        <button class="btn sm icon-only danger" onclick="deleteLead('${l.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function updateStatus(id, sel) {
+  const l = leads.find(x=>x.id===id); if(!l) return;
+  l.status = sel.value;
+  sel.className = `status-select ${statusClass(sel.value)}`;
+  markDirty(); render();
+}
+function markMessaged(id) {
+  const l = leads.find(x=>x.id===id); if(!l) return;
+  l.status = 'messaged'; markDirty(); render();
+  toast(`Status → Bericht gestuurd voor ${l.name}`);
+}
+
+// ── Add / edit / delete ─────────────────────────────────────────────────────
+function openAdd(){ document.getElementById('modal').innerHTML = modalHTML(); }
+function editLead(id){ document.getElementById('modal').innerHTML = modalHTML(leads.find(x=>x.id===id)); }
+function closeModal(){ document.getElementById('modal').innerHTML=''; }
+
+function modalHTML(l) {
+  return `<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>${l?'✏️ Lead bewerken':'➕ Nieuwe lead'}</h2>
+      <div class="field"><label>Naam</label><input id="f-name" value="${esc(l?.name||'')}" placeholder="Sophie van den Berg"></div>
+      <div class="field"><label>Functietitel</label><input id="f-title" value="${esc(l?.title||'')}" placeholder="HR Manager"></div>
+      <div class="field"><label>Vorig bedrijf</label><input id="f-old" value="${esc(l?.oldCompany||'')}" placeholder="Jumbo"></div>
+      <div class="field"><label>Nieuw bedrijf</label><input id="f-new" value="${esc(l?.newCompany||'')}" placeholder="Mollie"></div>
+      <div class="field"><label>Bedrijfsgrootte</label>
+        <select id="f-size">
+          <option value="">Onbekend</option>
+          ${['1–25','25–100','100–250','250–500','500–1000','>1000'].map(s=>`<option ${l?.size===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>LinkedIn URL</label><input id="f-url" value="${esc(l?.url||'')}" placeholder="https://linkedin.com/in/..."></div>
+      <div class="field"><label>Notitie</label><textarea id="f-notes">${esc(l?.notes||'')}</textarea></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()">Annuleren</button>
+        <button class="btn primary" onclick="${l?`saveLead('${l.id}')`:'addLead()'}">✓ ${l?'Opslaan':'Toevoegen'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function readForm() {
+  return {
+    name: document.getElementById('f-name').value.trim(),
+    title: document.getElementById('f-title').value.trim(),
+    oldCompany: document.getElementById('f-old').value.trim(),
+    newCompany: document.getElementById('f-new').value.trim(),
+    size: document.getElementById('f-size').value,
+    url: document.getElementById('f-url').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+  };
+}
+function addLead() {
+  const f = readForm();
+  if(!f.name){ alert('Naam is verplicht'); return; }
+  leads.unshift({ id:uid(), ...f, status:'new', manualType:null, messagesSent:[] });
+  markDirty(); closeModal(); render();
+}
+function saveLead(id) {
+  const l = leads.find(x=>x.id===id); if(!l) return;
+  Object.assign(l, readForm());
+  markDirty(); closeModal(); render();
+}
+function deleteLead(id) {
+  if(!confirm('Lead verwijderen? (wordt verwijderd bij volgende Opslaan)')) return;
+  leads = leads.filter(x=>x.id!==id); markDirty(); render();
+}
+
+function toast(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = 'import-toast';
+  el.style.background = err ? '#791F1F' : 'var(--text)';
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BERICHTEN (templates + analytics) — unchanged logic, cached not persisted
+// ════════════════════════════════════════════════════════════════════════════
+function saveTemplatesLocal(){ markDirty(); }
+function renderMessagesView() {
+  const stats = getMessageStats();
+  let html = '';
+  html += '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Beheer je LinkedIn-bericht templates. Beschikbaar in de Chrome-extensie zodra je op een profiel zit. Wijzigingen worden meegestuurd bij Opslaan.</div>';
+  html += '<div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:18px">';
+  html += '<div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px">📊 Analytics</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">';
+  html += statBox(stats.totalSent, 'Verstuurd', '');
+  html += statBox(stats.toLead, '→ Lead', 'var(--green)');
+  html += statBox(stats.toUnq, '→ Unqualified', '#A32D2D');
+  html += statBox(stats.conversionPct + '%', 'Conversie', 'var(--blue)');
+  html += '</div></div>';
+  html += '<div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px">Templates</div>';
+  templates.forEach(t => {
+    const ts = stats.perTemplate[t.id] || {sent:0,lead:0,unq:0,pct:0};
+    html += '<div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--surface)">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">';
+    html += '<input id="tpl-name-'+t.id+'" value="'+escAttr(t.name)+'" style="flex:1;font-size:14px;font-weight:600;border:none;background:transparent;color:var(--text);font-family:inherit;padding:2px 0">';
+    html += '<div style="display:flex;gap:8px;font-size:11px;color:var(--text2)"><span>📤 '+ts.sent+'</span><span style="color:var(--green)">✓ '+ts.lead+'</span><span style="color:#A32D2D">✗ '+ts.unq+'</span><span style="color:var(--blue);font-weight:600">'+ts.pct+'%</span></div>';
+    html += '</div>';
+    html += '<textarea id="tpl-body-'+t.id+'" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--text);min-height:90px;resize:vertical;font-family:inherit;line-height:1.5">'+escHtml(t.body)+'</textarea>';
+    html += '<div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">';
+    html += '<button class="btn sm" onclick="saveTemplate(\''+t.id+'\')">✓ Bijwerken</button>';
+    html += '<button class="btn sm danger" onclick="deleteTemplate(\''+t.id+'\')">🗑</button>';
+    html += '</div></div>';
+  });
+  html += '<button class="btn primary" onclick="addTemplate()" style="width:100%">➕ Nieuwe template</button>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-top:12px;line-height:1.5">💡 Gebruik <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">{voornaam}</code> en <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">{bedrijf}</code> als placeholders.</div>';
+  document.getElementById('messages-content').innerHTML = html;
+}
+function statBox(val,label,color){return '<div style="background:var(--surface);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:600;'+(color?'color:'+color:'')+'">'+val+'</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">'+label+'</div></div>';}
+function escHtml(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return (s||'').replace(/"/g,'&quot;');}
+function saveTemplate(id){
+  const t = templates.find(x=>x.id===id); if(!t) return;
+  t.name = document.getElementById('tpl-name-'+id).value.trim() || 'Naamloos';
+  t.body = document.getElementById('tpl-body-'+id).value;
+  markDirty(); toast('Template bijgewerkt (Opslaan om te bewaren)'); renderMessagesView();
+}
+function deleteTemplate(id){
+  if(!confirm('Template verwijderen?')) return;
+  templates = templates.filter(t=>t.id!==id); markDirty(); renderMessagesView();
+}
+function addTemplate(){
+  templates.push({id:'t'+Date.now(), name:'Nieuwe template', body:'Hoi {voornaam}, ...'});
+  markDirty(); renderMessagesView();
+}
+function getMessageStats(){
+  const stats={totalSent:0,toLead:0,toUnq:0,perTemplate:{}};
+  templates.forEach(t=>{stats.perTemplate[t.id]={sent:0,lead:0,unq:0,pct:0};});
+  leads.forEach(l=>{(l.messagesSent||[]).forEach(m=>{
+    stats.totalSent++;
+    if(stats.perTemplate[m.templateId]){
+      stats.perTemplate[m.templateId].sent++;
+      if(l.status==='lead'){stats.toLead++;stats.perTemplate[m.templateId].lead++;}
+      if(l.status==='unqualified'){stats.toUnq++;stats.perTemplate[m.templateId].unq++;}
+    }
+  });});
+  stats.conversionPct = stats.totalSent ? Math.round((stats.toLead/stats.totalSent)*100) : 0;
+  Object.keys(stats.perTemplate).forEach(id=>{const t=stats.perTemplate[id];t.pct=t.sent?Math.round((t.lead/t.sent)*100):0;});
+  return stats;
+}
+</script>
+</body>
+</html>
