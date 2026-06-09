@@ -37,18 +37,11 @@
   a:hover { text-decoration: underline; }
 
   /* ── Layout shell ─────────────────────────────────────────── */
-  .shell { height: 100vh; display: grid; grid-template-columns: 56px 1fr; }
-
-  /* Sidebar */
-  .sidebar { background: var(--sidebar); border-right: 1px solid var(--border); padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  .sb-logo { width: 36px; height: 36px; border-radius: 8px; background: #fff; border: 1px solid var(--border); display: grid; place-items: center; font-weight: 700; font-size: 13px; color: var(--primary); margin-bottom: 8px; }
-  .sb-item { width: 40px; height: 40px; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; color: var(--text2); cursor: pointer; font-size: 16px; transition: background 0.12s; }
-  .sb-item.active { background: var(--primary-bg); color: var(--primary); }
-  .sb-item:hover { background: var(--primary-bg); color: var(--primary); }
-  .sb-spacer { flex: 1; }
+  .shell { height: 100vh; display: grid; grid-template-columns: 1fr; }
 
   /* Topbar */
   .main { display: grid; grid-template-rows: 56px 1fr; min-width: 0; }
+  .topbar-divider { width: 1px; height: 22px; background: var(--border2); margin: 0 2px; }
   .topbar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; gap: 12px; }
   .topbar-left { display: flex; align-items: center; gap: 24px; }
   .logo { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
@@ -58,8 +51,31 @@
   .nav-item:hover { background: var(--primary-bg); color: var(--primary); }
   .nav-item.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
   .topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .topbar-collapse { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 12px; margin-left: 24px; }
+  .burger { display: none; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 18px; cursor: pointer; align-items: center; justify-content: center; }
+  .burger:hover { background: var(--surface2); }
   .view { display: none; }
   .view.active { display: block; }
+
+  /* ── Mobile / narrow: collapse the header into a burger menu ── */
+  @media (max-width: 820px) {
+    .topbar { position: relative; padding: 0 14px; }
+    .topbar-left { flex: 1; justify-content: space-between; gap: 12px; }
+    .burger { display: inline-flex; }
+    .topbar-collapse {
+      display: none; position: absolute; top: 56px; left: 0; right: 0;
+      flex-direction: column; align-items: stretch; gap: 8px; margin: 0; padding: 12px 14px;
+      background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-float); z-index: 60;
+    }
+    .topbar.open .topbar-collapse { display: flex; }
+    .nav-menu { flex-direction: column; gap: 4px; }
+    .nav-item { width: 100%; text-align: left; height: 40px; }
+    .topbar-actions { flex-direction: column; align-items: stretch; gap: 6px; }
+    .topbar-actions .btn { width: 100%; justify-content: flex-start; }
+    .topbar-actions .btn.icon-only { width: 100%; justify-content: center; }
+    .save-wrap { justify-content: space-between; width: 100%; }
+    .topbar-divider { display: none; }
+  }
 
   /* Buttons */
   .btn { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; text-decoration: none; transition: background 0.12s; box-shadow: var(--shadow-card); }
@@ -138,6 +154,10 @@
   .src-tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; background: var(--surface2); color: var(--text3); font-weight: 500; }
   .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
   .card-note { font-size: 12px; color: var(--text2); margin-top: 8px; padding: 8px 12px; background: var(--surface2); border-radius: var(--radius); line-height: 1.5; }
+  .msg-log { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .msg-row { font-size: 12px; background: var(--surface2); border-radius: 8px; padding: 6px 10px; line-height: 1.45; }
+  .msg-meta { display: block; color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-bottom: 2px; }
+  .msg-text { color: var(--text2); white-space: pre-wrap; }
   .card-actions { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
   .card-actions .spacer { flex: 1; }
 
@@ -237,39 +257,20 @@
 
 <div class="app-shell" id="app-shell">
 <div class="shell">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sb-logo">li</div>
-    <button class="sb-item active" onclick="switchView('leads')" id="sb-leads" title="Leads">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
-    </button>
-    <button class="sb-item" onclick="switchView('messages')" id="sb-messages" title="Messages">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    </button>
-    <button class="sb-item" onclick="switchView('help')" id="sb-help" title="Help">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    </button>
-    <div class="sb-spacer"></div>
-    <button class="sb-item" onclick="openSettings()" title="Settings">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
-    <button class="sb-item" onclick="lockAndReload()" title="Lock">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </button>
-  </aside>
-
   <!-- Main column -->
   <div class="main">
     <!-- Topbar -->
     <header class="topbar">
       <div class="topbar-left">
         <div class="logo"><span class="logo-icon">🎯</span><span data-i18n="appTitle">LinkedIn Outreach CRM</span></div>
+        <button class="burger" onclick="toggleMenu()" aria-label="Menu" title="Menu">☰</button>
+      </div>
+      <div class="topbar-collapse" id="topbar-collapse">
         <nav class="nav-menu">
           <button class="nav-item active" data-view="leads" onclick="switchView('leads')" data-i18n="navLeads"></button>
           <button class="nav-item" data-view="messages" onclick="switchView('messages')" data-i18n="navMessages"></button>
           <button class="nav-item" data-view="help" onclick="switchView('help')" data-i18n="navHelp"></button>
         </nav>
-      </div>
       <div class="topbar-actions">
         <button class="btn sm" id="walkthrough-btn" onclick="openWalkthrough()" data-tip="" data-i18n="howItWorks"></button>
         <button class="btn sm" id="env-toggle" onclick="toggleEnv()" data-tip=""></button>
@@ -280,6 +281,14 @@
         </div>
         <button class="btn" onclick="reloadFromN8n()" data-tip="" data-i18n="refreshBtn"></button>
         <button class="btn primary" onclick="openAdd()" data-tip="" data-i18n="addBtn"></button>
+        <div class="topbar-divider"></div>
+        <button class="btn icon-only" onclick="openSettings()" data-tip="" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="btn icon-only" onclick="lockAndReload()" data-tip="" title="Lock">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </button>
+      </div>
       </div>
     </header>
 
@@ -287,12 +296,7 @@
     <div class="content">
       <!-- Banner -->
       <div class="banner">
-        <div class="banner-title">🎯 LinkedIn Outreach</div>
-        <div class="banner-actions">
-          <button class="banner-pill active" onclick="switchView('leads')" data-i18n="navLeads"></button>
-          <button class="banner-pill" onclick="switchView('messages')" data-i18n="navMessages"></button>
-          <button class="banner-pill" onclick="switchView('help')" data-i18n="navHelp"></button>
-        </div>
+        <div class="banner-title" id="banner-title">🎯 LinkedIn Outreach</div>
       </div>
 
       <div class="view view-leads active" id="view-leads">
@@ -325,6 +329,8 @@ const N8N_URLS = {
 };
 const SALES_NAV_URL = '';
 const EXTENSION_ZIP_URL = 'chrome-extension.zip';
+// Default AI system prompt for message drafting (editable per request in the compose dialog).
+const AI_SYSTEM_PROMPT = 'You are a sales assistant for HoorayHR (HR software for SMBs). Write short, warm, personal LinkedIn outreach messages to people who recently changed jobs. Be human, never salesy, max 4 sentences. Reply ONLY with the message text, in the same language as the user instruction.';
 
 const KEY_SS='li_crm_n8n_key', CACHE_SS='li_crm_cache_v1', TPL_SS='li_crm_templates_v1';
 const ENV_LS='li_crm_env', LANG_LS='li_crm_lang';
@@ -397,6 +403,14 @@ const I18N = {
     whPdWhen:'On “Lead” / button', whPdDoes:'Create a Person + Organisation + Deal in Pipedrive, with a context note about the job change.',
     whEnrichWhen:'After import', whEnrichDoes:'Enrich a lead (company size, sector, email) from an external source.',
     whTagWhen:'Manual / auto', whTagDoes:'Add custom tags (e.g. priority, sector, campaign) beyond the built-in lead type.',
+    // ── v2 additions ──
+    pdAdd:'➕ Pipedrive', pdConfirm:'Create a Pipedrive deal for {name}?', pdSyncAsk:'{name} is not in Pipedrive yet. Create the deal now?',
+    pdAdding:'⏳ Adding to Pipedrive…', pdAdded:'✅ Added to Pipedrive', pdFail:'❌ Pipedrive failed: ', pdAlready:'In Pipedrive ✓',
+    composeTitle:'✉️ Send message', composePick:'Template', composeFree:'— Free text —', composeMsg:'Message',
+    composeAiPrompt:'AI instruction (optional)', composeAiPh:'e.g. congratulate the move, keep it casual', composeGen:'✨ Generate with AI', composeGening:'⏳ Generating…',
+    composeCopy:'📋 Copy', composeCopied:'✓ Copied', composeMark:'✓ Mark as sent', aiFail:'❌ AI failed: ', composeEmpty:'Write or generate a message first',
+    whTplWhen:'On unlock / Refresh', whTplDoesL:'Reads message templates from the Templates sheet.', whTplSaveWhen:'On template edit / Save', whTplDoesS:'Writes templates back to the Templates sheet.',
+    tplSavedDb:'✓ Templates saved', tplSaveFail:'Template save failed: ',
   },
   de: {
     _name:'Deutsch',
@@ -463,6 +477,14 @@ const I18N = {
     whPdWhen:'Bei „Lead“ / Button', whPdDoes:'Person + Organisation + Deal in Pipedrive anlegen, mit Kontext-Notiz zum Jobwechsel.',
     whEnrichWhen:'Nach dem Import', whEnrichDoes:'Lead anreichern (Unternehmensgröße, Branche, E-Mail) aus externer Quelle.',
     whTagWhen:'Manuell / automatisch', whTagDoes:'Eigene Tags hinzufügen (z. B. Priorität, Branche, Kampagne) über den Lead-Typ hinaus.',
+    // ── v2 ──
+    pdAdd:'➕ Pipedrive', pdConfirm:'Einen Pipedrive-Deal für {name} anlegen?', pdSyncAsk:'{name} ist noch nicht in Pipedrive. Deal jetzt anlegen?',
+    pdAdding:'⏳ Wird zu Pipedrive hinzugefügt…', pdAdded:'✅ Zu Pipedrive hinzugefügt', pdFail:'❌ Pipedrive fehlgeschlagen: ', pdAlready:'In Pipedrive ✓',
+    composeTitle:'✉️ Nachricht senden', composePick:'Vorlage', composeFree:'— Freitext —', composeMsg:'Nachricht',
+    composeAiPrompt:'KI-Anweisung (optional)', composeAiPh:'z. B. zum Wechsel gratulieren, locker bleiben', composeGen:'✨ Mit KI generieren', composeGening:'⏳ Generiere…',
+    composeCopy:'📋 Kopieren', composeCopied:'✓ Kopiert', composeMark:'✓ Als gesendet markieren', aiFail:'❌ KI fehlgeschlagen: ', composeEmpty:'Zuerst eine Nachricht schreiben oder generieren',
+    whTplWhen:'Beim Entsperren / Aktualisieren', whTplDoesL:'Liest Nachrichtenvorlagen aus dem Templates-Sheet.', whTplSaveWhen:'Beim Bearbeiten / Speichern', whTplDoesS:'Schreibt Vorlagen zurück ins Templates-Sheet.',
+    tplSavedDb:'✓ Vorlagen gespeichert', tplSaveFail:'Vorlagen speichern fehlgeschlagen: ',
   },
   nl: {
     _name:'Nederlands',
@@ -529,6 +551,14 @@ const I18N = {
     whPdWhen:'Bij “Lead” / knop', whPdDoes:'Maak een Persoon + Organisatie + Deal in Pipedrive, met contextnotitie over de baanwissel.',
     whEnrichWhen:'Na import', whEnrichDoes:'Verrijk een lead (bedrijfsgrootte, sector, e-mail) uit een externe bron.',
     whTagWhen:'Handmatig / automatisch', whTagDoes:'Voeg eigen tags toe (bijv. prioriteit, sector, campagne) naast het lead-type.',
+    // ── v2 ──
+    pdAdd:'➕ Pipedrive', pdConfirm:'Een Pipedrive-deal aanmaken voor {name}?', pdSyncAsk:'{name} staat nog niet in Pipedrive. Nu de deal aanmaken?',
+    pdAdding:'⏳ Toevoegen aan Pipedrive…', pdAdded:'✅ Toegevoegd aan Pipedrive', pdFail:'❌ Pipedrive mislukt: ', pdAlready:'In Pipedrive ✓',
+    composeTitle:'✉️ Bericht sturen', composePick:'Sjabloon', composeFree:'— Vrije tekst —', composeMsg:'Bericht',
+    composeAiPrompt:'AI-instructie (optioneel)', composeAiPh:'bijv. feliciteer met de overstap, houd het casual', composeGen:'✨ Genereer met AI', composeGening:'⏳ Genereren…',
+    composeCopy:'📋 Kopiëren', composeCopied:'✓ Gekopieerd', composeMark:'✓ Markeer als verstuurd', aiFail:'❌ AI mislukt: ', composeEmpty:'Schrijf of genereer eerst een bericht',
+    whTplWhen:'Bij ontgrendelen / Verversen', whTplDoesL:'Leest berichtsjablonen uit het Templates-sheet.', whTplSaveWhen:'Bij bewerken / Opslaan', whTplDoesS:'Schrijft sjablonen terug naar het Templates-sheet.',
+    tplSavedDb:'✓ Sjablonen opgeslagen', tplSaveFail:'Sjablonen opslaan mislukt: ',
   }
 };
 let lang = localStorage.getItem(LANG_LS) || 'en';
@@ -589,6 +619,7 @@ async function unlock(){
     leads=normalizeLeads(result.leads||[]);
     if(Array.isArray(result.templates)&&result.templates.length) templates=result.templates;
     saveCache(); publishBridge(); showApp();
+    loadTemplates();
   } catch(e){ showGateError(e.message==='401'?t('badKey'):(t('loadFail')+e.message)); btn.disabled=false; btn.textContent=t('unlockBtn'); }
 }
 function showGateError(m){ const el=document.getElementById('gate-err'); el.textContent=m; el.classList.add('show'); }
@@ -621,13 +652,31 @@ async function reloadFromN8n(silent=false){
     dirty=false; updateSaveUI(); saveCache(); render();
     if(activeView==='messages') renderMessagesView();
     setSync(t('loadingDone')); if(!silent) toast(t('loaded'));
+    loadTemplates();
   } catch(e){ setSync(t('loadErr')); if(e.message==='401'){ toast(t('badKey'),true); lockAndReload(); } else toast(t('loadFail')+e.message,true); }
 }
 async function syncToN8n(){
   if(!getKey()) return; const btn=document.getElementById('save-btn'); btn.disabled=true; setSync(t('saving'));
-  try { await n8nCall('sync',{leads,templates}); dirty=false; updateSaveUI(); saveCache(); setSync(t('savedShort')); toast(t('saved')); }
+  try { await n8nCall('sync',{leads}); await persistTemplates(true); dirty=false; updateSaveUI(); saveCache(); setSync(t('savedShort')); toast(t('saved')); }
   catch(e){ setSync(t('saveErrShort')); toast(t('saveFail')+e.message,true); }
   finally { btn.disabled=false; }
+}
+
+// ── templates: same webhook, dedicated actions, mirrored to a Templates sheet ──
+async function loadTemplates(){
+  if(!getKey()) return;
+  try {
+    const r=await n8nCall('list-templates');
+    if(Array.isArray(r.templates)){
+      templates = r.templates.length ? r.templates.map(tp=>({id:tp.id||('t'+uid()),name:tp.name||'—',body:tp.body||''})) : templates;
+      saveCache(); if(activeView==='messages') renderMessagesView();
+    }
+  } catch(e){ /* templates action not set up yet → keep defaults silently */ }
+}
+async function persistTemplates(silentOk){
+  if(!getKey()) return;
+  try { await n8nCall('save-templates',{templates}); if(!silentOk) toast(t('tplSavedDb')); }
+  catch(e){ if(!silentOk) toast(t('tplSaveFail')+e.message,true); throw e; }
 }
 function setSync(x){ document.getElementById('sync-status').textContent=x; }
 function saveCache(){ try{ sessionStorage.setItem(CACHE_SS,JSON.stringify(leads)); sessionStorage.setItem(TPL_SS,JSON.stringify(templates)); }catch(e){} }
@@ -640,7 +689,8 @@ function normalizeLeads(arr){
     id:l.id||uid(), name:l.name||'?', title:l.title||'', oldCompany:l.oldCompany||'', newCompany:l.newCompany||'',
     size:l.size||'', url:l.url||l.linkedinUrl||'',
     status:['new','benaderen','messaged','lead','in-pipedrive','unqualified','not-interested'].includes(l.status)?l.status:'new',
-    notes:l.notes||'', manualType:l.manualType||null, source:l.source||'', messagesSent:Array.isArray(l.messagesSent)?l.messagesSent:[]
+    notes:l.notes||'', manualType:l.manualType||null, source:l.source||'', pipedrive:l.pipedrive||'',
+    messagesSent:Array.isArray(l.messagesSent)?l.messagesSent:(typeof l.messagesSent==='string'&&l.messagesSent?safeArr(l.messagesSent):[])
   }));
 }
 
@@ -648,17 +698,21 @@ function switchView(v){
   activeView=v;
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.getAttribute('data-view')===v));
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='view-'+v));
-  // sidebar items
-  ['leads','messages','help'].forEach(k=>{const el=document.getElementById('sb-'+k);if(el)el.classList.toggle('active',k===v);});
-  // banner pills
-  document.querySelectorAll('.banner-pill').forEach((p,i)=>p.classList.toggle('active',['leads','messages','help'][i]===v));
+  const bt=document.getElementById('banner-title');
+  if(bt) bt.textContent = v==='messages'?'✉️ '+t('navMessages') : v==='help'?'❔ '+t('navHelp') : '🎯 LinkedIn Outreach';
   if(v==='messages') renderMessagesView();
   if(v==='help') renderHelpView();
+  closeMenu();
 }
+function toggleMenu(){ const tb=document.querySelector('.topbar'); if(tb) tb.classList.toggle('open'); }
+function closeMenu(){ const tb=document.querySelector('.topbar'); if(tb) tb.classList.remove('open'); }
 const AVATAR_COLORS=[['#B5D4F4','#042C53'],['#9FE1CB','#04342C'],['#FAC775','#412402'],['#F4C0D1','#4B1528'],['#C0DD97','#173404'],['#F0997B','#4A1B0C']];
 function avatarColor(n){let h=0;for(let c of n)h=(h*31+c.charCodeAt(0))%AVATAR_COLORS.length;return AVATAR_COLORS[h];}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function uid(){return Date.now()+Math.random().toString(36).slice(2,6);}
+function safeArr(s){ try{ const v=JSON.parse(s); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function firstName(n){ return (n||'').trim().split(/\s+/)[0]||''; }
+function fillPlaceholders(text,l){ return (text||'').replace(/\{voornaam\}/g,firstName(l.name)).replace(/\{bedrijf\}/g,l.newCompany||l.oldCompany||''); }
 function setFilter(f){activeFilter=f;render();}
 function setLeadType(x){activeLeadType=x;render();}
 function getLeadType(l){ if(l&&typeof l==='object'){ if(l.manualType==='partner'||l.manualType==='direct')return l.manualType; return detectLeadType(l.title);} return detectLeadType(l); }
@@ -692,12 +746,10 @@ function render(){
   const el=document.getElementById('leads');
   if(!filtered.length){ el.innerHTML=`<div class="empty"><p>👥 ${t('noLeads')}</p></div>`; return; }
   el.innerHTML=filtered.map(l=>{
-    const [bg,fg]=avatarColor(l.name);
     const opts=['new','benaderen','messaged','lead','in-pipedrive','unqualified','not-interested'].map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${statusLabel(s)}</option>`).join('');
     const srcLabel = l.source==='salesnav'?'Sales Nav':l.source==='profile'?'LinkedIn':l.source==='manual'?'Manual':'';
     return `<div class="card">
       <div class="card-top">
-        <div class="avatar" style="background:${bg};color:${fg}">${initials(l.name)}</div>
         <div class="card-info">
           <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
             <div class="card-name">${esc(l.name)}</div>
@@ -716,9 +768,11 @@ function render(){
         </div>
       </div>
       ${l.notes?`<div class="card-note">📝 ${esc(l.notes)}</div>`:''}
+      ${renderMsgLog(l)}
       <div class="card-actions">
-        ${['new','benaderen'].includes(l.status)?`<button class="btn sm message-btn" onclick="markMessaged('${l.id}')">${t('msgSent')}</button>`:''}
+        ${['new','benaderen','messaged'].includes(l.status)?`<button class="btn sm message-btn" onclick="openCompose('${l.id}')">${t('msgSent')}</button>`:''}
         <a href="${esc(l.url||'#')}" target="_blank" class="btn sm">${t('linkedinBtn')}</a>
+        ${l.pipedrive?`<span class="btn sm" style="background:var(--green-bg);border-color:var(--green);color:var(--green-text);cursor:default">${t('pdAlready')}</span>`:`<button class="btn sm" onclick="addToPipedrive('${l.id}')">${t('pdAdd')}</button>`}
         <div class="spacer"></div>
         <button class="btn sm icon-only" onclick="editLead('${l.id}')">✏️</button>
         <button class="btn sm icon-only danger" onclick="deleteLead('${l.id}')">🗑</button>
@@ -726,9 +780,97 @@ function render(){
     </div>`;
   }).join('');
 }
+function renderMsgLog(l){
+  const msgs=Array.isArray(l.messagesSent)?l.messagesSent:[];
+  if(!msgs.length) return '';
+  const rows=msgs.slice(-4).map(m=>{
+    const tp=templates.find(x=>x.id===m.templateId);
+    const when=m.sentAt?new Date(m.sentAt).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
+    const label=tp?esc(tp.name):t('composeFree');
+    return `<div class="msg-row"><span class="msg-meta">📤 ${when}${when?' · ':''}${label}</span><span class="msg-text">${esc(m.text||'')}</span></div>`;
+  }).join('');
+  return `<div class="msg-log">${rows}</div>`;
+}
 function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function updateStatus(id,sel){ const l=leads.find(x=>x.id===id); if(!l)return; l.status=sel.value; sel.className=`status-select ${statusClass(sel.value)}`; markDirty(); render(); }
-function markMessaged(id){ const l=leads.find(x=>x.id===id); if(!l)return; l.status='messaged'; markDirty(); render(); }
+function updateStatus(id,sel){
+  const l=leads.find(x=>x.id===id); if(!l)return;
+  const v=sel.value;
+  l.status=v; sel.className=`status-select ${statusClass(v)}`; markDirty(); render();
+  // Moving to "In Pipedrive" but no deal yet → offer to create it
+  if(v==='in-pipedrive' && !l.pipedrive){
+    if(confirm(t('pdSyncAsk',{name:l.name}))) addToPipedrive(id,true);
+  }
+}
+
+// ── Pipedrive: create org+person+deal+note via the n8n pipedrive-add action ──
+async function addToPipedrive(id,skipConfirm){
+  const l=leads.find(x=>x.id===id); if(!l)return;
+  if(l.pipedrive){ toast(t('pdAlready')); return; }
+  if(!skipConfirm && !confirm(t('pdConfirm',{name:l.name}))) return;
+  setSync(t('pdAdding'));
+  try {
+    const r=await n8nCall('pipedrive-add',{lead:{name:l.name,title:l.title,oldCompany:l.oldCompany,newCompany:l.newCompany,url:l.url,leadType:getLeadType(l),notes:l.notes}});
+    l.pipedrive=(r&&r.dealId)?String(r.dealId):'yes';
+    if(l.status!=='in-pipedrive'){ l.status='in-pipedrive'; }
+    markDirty(); render(); setSync(t('pdAdded')); toast(t('pdAdded'));
+  } catch(e){ setSync(''); toast(t('pdFail')+(e.message==='401'?t('badKey'):e.message),true); }
+}
+
+// ── Compose / log a sent message (manual text + optional AI draft) ──
+let composeLeadId=null;
+function openCompose(id){
+  composeLeadId=id;
+  const l=leads.find(x=>x.id===id); if(!l)return;
+  const tplOpts=`<option value="">${t('composeFree')}</option>`+templates.filter(tp=>!tp.deleted).map(tp=>`<option value="${tp.id}">${escA(tp.name)}</option>`).join('');
+  document.getElementById('modal').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal wide">
+    <h2>${t('composeTitle')} — ${esc(l.name)}</h2>
+    <div class="field"><label>${t('composePick')}</label><select id="cm-tpl" onchange="composePickTemplate()">${tplOpts}</select></div>
+    <div class="field"><label>${t('composeMsg')}</label><textarea id="cm-text" style="min-height:120px"></textarea></div>
+    <div class="field" style="background:var(--surface2);border-radius:10px;padding:10px">
+      <label>✨ ${t('composeAiPrompt')}</label>
+      <input id="cm-ai" placeholder="${escA(t('composeAiPh'))}">
+      <button class="btn sm" style="margin-top:8px" id="cm-gen" onclick="composeGenerate()">${t('composeGen')}</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="composeCopy()">${t('composeCopy')}</button>
+      <button class="btn" onclick="closeModal()">${t('cancel')}</button>
+      <button class="btn green" onclick="composeMarkSent()">${t('composeMark')}</button>
+    </div>
+  </div></div>`;
+  // preselect first template if any
+  const firstTpl=templates.filter(tp=>!tp.deleted)[0];
+  if(firstTpl){ document.getElementById('cm-tpl').value=firstTpl.id; composePickTemplate(); }
+}
+function composePickTemplate(){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  const id=document.getElementById('cm-tpl').value;
+  const tp=templates.find(x=>x.id===id);
+  if(tp) document.getElementById('cm-text').value=fillPlaceholders(tp.body,l);
+}
+async function composeGenerate(){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  const btn=document.getElementById('cm-gen'); const instr=document.getElementById('cm-ai').value.trim();
+  const userPrompt=(instr||'Write a short, warm LinkedIn message congratulating this person on their new role and gently opening a conversation about HR software.')+`\n\nReply in this language: ${I18N[lang]._name}.`;
+  btn.disabled=true; btn.textContent=t('composeGening');
+  try {
+    const r=await n8nCall('ai-message',{system:AI_SYSTEM_PROMPT,prompt:userPrompt,lead:{name:l.name,title:l.title,oldCompany:l.oldCompany,newCompany:l.newCompany,leadType:getLeadType(l),notes:l.notes}});
+    const text=(r&&r.text)?r.text:'';
+    if(text) document.getElementById('cm-text').value=text;
+  } catch(e){ toast(t('aiFail')+(e.message==='401'?t('badKey'):e.message),true); }
+  finally { btn.disabled=false; btn.textContent=t('composeGen'); }
+}
+function composeCopy(){ const ta=document.getElementById('cm-text'); ta.select(); try{ document.execCommand('copy'); }catch(e){} toast(t('composeCopied')); }
+function composeMarkSent(){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  const text=document.getElementById('cm-text').value.trim();
+  if(!text){ alert(t('composeEmpty')); return; }
+  const tplId=document.getElementById('cm-tpl').value;
+  if(!Array.isArray(l.messagesSent)) l.messagesSent=[];
+  l.messagesSent.push({templateId:tplId||'', text, sentAt:new Date().toISOString()});
+  l.status='messaged';
+  markDirty(); closeModal(); render();
+  toast(t('msgSent'));
+}
 
 function openAdd(){ document.getElementById('modal').innerHTML=modalHTML(); }
 function editLead(id){ document.getElementById('modal').innerHTML=modalHTML(leads.find(x=>x.id===id)); }
@@ -792,7 +934,7 @@ function renderHelpView(){
   const statuses=[['new','s-new'],['benaderen','s-benaderen'],['messaged','s-messaged'],['lead','s-lead'],['in-pipedrive','s-in-pipedrive'],['unqualified','s-unqualified'],['not-interested','s-not-interested']];
   const stRows=statuses.map(([s,cls])=>`<div class="tag-row"><span class="status-select ${cls}" style="cursor:default">${statusLabel(s)}</span></div>`).join('');
   const future=[['enrich',t('whEnrichWhen'),t('whEnrichDoes')],['tag',t('whTagWhen'),t('whTagDoes')]];
-  const current=[['list',t('whListWhen'),t('whListDoes')],['sync',t('whSyncWhen'),t('whSyncDoes')],['import',t('whImportWhen'),t('whImportDoes')],['pipedrive-add',t('whPdWhen'),t('whPdDoes')],['ai-message',t('whAiWhen'),t('whAiDoes')]];
+  const current=[['list',t('whListWhen'),t('whListDoes')],['sync',t('whSyncWhen'),t('whSyncDoes')],['import',t('whImportWhen'),t('whImportDoes')],['pipedrive-add',t('whPdWhen'),t('whPdDoes')],['ai-message',t('whAiWhen'),t('whAiDoes')],['list-templates',t('whTplWhen'),t('whTplDoesL')],['save-templates',t('whTplSaveWhen'),t('whTplDoesS')]];
   document.getElementById('help-content').innerHTML=`
     <h2 style="font-size:18px;font-weight:700;margin-bottom:6px">${t('helpTitle')}</h2>
     <p style="font-size:13px;color:var(--text2);margin-bottom:18px">${t('helpIntro')}</p>
@@ -831,7 +973,7 @@ function renderMessagesView(){
   h+=`<div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:18px"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('analytics')}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">`;
   h+=sbox(stats.totalSent,t('sent'),'')+sbox(stats.toLead,t('toLead'),'var(--green)')+sbox(stats.toUnq,t('toUnq'),'#A32D2D')+sbox(stats.conversionPct+'%',t('conversion'),'var(--blue)');
   h+=`</div></div><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('templates')}</div>`;
-  templates.forEach(tp=>{ const ts=stats.perTemplate[tp.id]||{sent:0,lead:0,unq:0,pct:0};
+  templates.filter(tp=>!tp.deleted).forEach(tp=>{ const ts=stats.perTemplate[tp.id]||{sent:0,lead:0,unq:0,pct:0};
     h+=`<div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--surface)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
       <input id="tn-${tp.id}" value="${escA(tp.name)}" style="flex:1;font-size:14px;font-weight:600;border:none;background:transparent;color:var(--text);font-family:inherit">
@@ -845,10 +987,10 @@ function renderMessagesView(){
 function sbox(v,l,c){return `<div style="background:var(--surface);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:600;${c?'color:'+c:''}">${v}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">${l}</div></div>`;}
 function escH(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escA(s){return (s||'').replace(/"/g,'&quot;');}
-function saveTemplate(id){ const tp=templates.find(x=>x.id===id); if(!tp)return; tp.name=document.getElementById('tn-'+id).value.trim()||'—'; tp.body=document.getElementById('tb-'+id).value; markDirty(); toast(t('tplUpdated')); renderMessagesView(); }
-function deleteTemplate(id){ if(!confirm(t('delConfirm')))return; templates=templates.filter(x=>x.id!==id); markDirty(); renderMessagesView(); }
-function addTemplate(){ templates.push({id:'t'+Date.now(),name:t('newTemplate').replace('➕ ',''),body:'Hoi {voornaam}, ...'}); markDirty(); renderMessagesView(); }
-function getMessageStats(){ const s={totalSent:0,toLead:0,toUnq:0,perTemplate:{}}; templates.forEach(tp=>s.perTemplate[tp.id]={sent:0,lead:0,unq:0,pct:0});
+function saveTemplate(id){ const tp=templates.find(x=>x.id===id); if(!tp)return; tp.name=document.getElementById('tn-'+id).value.trim()||'—'; tp.body=document.getElementById('tb-'+id).value; markDirty(); persistTemplates(); renderMessagesView(); }
+function deleteTemplate(id){ if(!confirm(t('delConfirm')))return; const tp=templates.find(x=>x.id===id); if(tp) tp.deleted=true; markDirty(); persistTemplates(); renderMessagesView(); }
+function addTemplate(){ templates.push({id:'t'+Date.now()+Math.random().toString(36).slice(2,5),name:t('newTemplate').replace('➕ ',''),body:'Hoi {voornaam}, ...'}); markDirty(); persistTemplates(); renderMessagesView(); }
+function getMessageStats(){ const s={totalSent:0,toLead:0,toUnq:0,perTemplate:{}}; templates.filter(tp=>!tp.deleted).forEach(tp=>s.perTemplate[tp.id]={sent:0,lead:0,unq:0,pct:0});
   leads.forEach(l=>(l.messagesSent||[]).forEach(m=>{ s.totalSent++; if(s.perTemplate[m.templateId]){ s.perTemplate[m.templateId].sent++; if(l.status==='lead'){s.toLead++;s.perTemplate[m.templateId].lead++;} if(l.status==='unqualified'){s.toUnq++;s.perTemplate[m.templateId].unq++;} } }));
   s.conversionPct=s.totalSent?Math.round(s.toLead/s.totalSent*100):0;
   Object.keys(s.perTemplate).forEach(id=>{const x=s.perTemplate[id];x.pct=x.sent?Math.round(x.lead/x.sent*100):0;}); return s; }
