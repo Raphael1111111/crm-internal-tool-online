@@ -313,6 +313,8 @@
   .coach-text { background: var(--surface2); border-radius: 10px; padding: 12px 14px; line-height: 1.65; color: var(--text); font-size: 13px; }
   .coach-empty { font-size: 12px; color: var(--text3); }
   .coach-loading { font-size: 13px; color: var(--primary); }
+  .cm-lang-wrap { margin-left: auto; font-size: 12px; color: var(--text2); display: inline-flex; align-items: center; gap: 4px; }
+  .lang-mini { height: 26px; padding: 0 6px; font-size: 12px; border: 1px solid var(--border2); border-radius: 7px; background: var(--surface); color: var(--text); }
 </style>
 </head>
 <body>
@@ -542,6 +544,8 @@ const I18N = {
     coachHint:'Send a few messages, then let the coach review what works and what to tweak.',
     coachNone:'Send at least 2 messages first — then I can give useful feedback.',
     coachDueBadge:'New feedback', coachNudge:'🧠 {n} messages sent — get AI feedback in the Messages tab.',
+    // ── v7: template personalise + prospect language ──
+    aiPersonalizeTpl:'🪄 Personalise template', composePickTplFirst:'Pick a template first', langAuto:'Auto',
   },
   de: {
     _name:'Deutsch',
@@ -644,6 +648,8 @@ const I18N = {
     coachHint:'Sende ein paar Nachrichten, dann prüft der Coach, was funktioniert und was du verbessern kannst.',
     coachNone:'Sende zuerst mindestens 2 Nachrichten — dann gibt es nützliches Feedback.',
     coachDueBadge:'Neues Feedback', coachNudge:'🧠 {n} Nachrichten gesendet — hol dir KI-Feedback im Nachrichten-Tab.',
+    // ── v7: Vorlage personalisieren + Sprache des Kontakts ──
+    aiPersonalizeTpl:'🪄 Vorlage personalisieren', composePickTplFirst:'Zuerst eine Vorlage wählen', langAuto:'Auto',
   },
   nl: {
     _name:'Nederlands',
@@ -746,6 +752,8 @@ const I18N = {
     coachHint:'Stuur een paar berichten, laat de coach dan beoordelen wat werkt en wat beter kan.',
     coachNone:'Stuur eerst minstens 2 berichten — dan kan ik nuttige feedback geven.',
     coachDueBadge:'Nieuwe feedback', coachNudge:'🧠 {n} berichten verstuurd — haal AI-feedback in het tabblad Berichten.',
+    // ── v7: sjabloon personaliseren + taal van het contact ──
+    aiPersonalizeTpl:'🪄 Sjabloon personaliseren', composePickTplFirst:'Kies eerst een sjabloon', langAuto:'Auto',
   }
 };
 let lang = localStorage.getItem(LANG_LS) || 'en';
@@ -807,6 +815,7 @@ async function unlock(){
     sessionStorage.setItem(KEY_SS,key);
     leads=normalizeLeads(result.leads||[]);
     if(Array.isArray(result.templates)&&result.templates.length) templates=normTpls(result.templates);
+    await loadTemplates(key);
     saveCache(); publishBridge(); showApp();
   } catch(e){ showGateError(e.message==='401'?t('badKey'):(t('loadFail')+e.message)); btn.disabled=false; btn.textContent=t('unlockBtn'); }
 }
@@ -837,6 +846,7 @@ async function reloadFromN8n(silent=false){
     const result=await n8nCall('list');
     leads=normalizeLeads(result.leads||[]);
     if(Array.isArray(result.templates)&&result.templates.length) templates=normTpls(result.templates);
+    await loadTemplates();
     dirty=false; updateSaveUI(); saveCache(); render();
     if(activeView==='messages') renderMessagesView();
     setSync(t('loadingDone')); if(!silent) toast(t('loaded'));
@@ -849,8 +859,12 @@ async function syncToN8n(){
   finally { btn.disabled=false; }
 }
 
-// ── templates: loaded with the leads in the same `list` call (at login), saved via `save-templates` ──
+// ── templates: pulled from the DB via `list-templates` (the `list` action returns none), saved via `save-templates` ──
 function normTpls(arr){ return (arr||[]).filter(tp=>tp&&!tp.deleted).map(tp=>({id:tp.id||('t'+uid()),name:tp.name||'—',body:tp.body||''})); }
+async function loadTemplates(keyOverride){
+  try{ const r=await n8nCall('list-templates',{},keyOverride); if(r&&Array.isArray(r.templates)&&r.templates.length) templates=normTpls(r.templates); }
+  catch(e){ /* keep current templates if the call fails */ }
+}
 async function persistTemplates(silentOk){
   if(!getKey()) return;
   try { await n8nCall('save-templates',{templates}); if(!silentOk) toast(t('tplSavedDb')); }
@@ -1129,8 +1143,9 @@ function openCompose(id){
     <div id="cm-variants"></div>
     <div class="field"><label>${t('composeMsg')}</label><textarea id="cm-text" style="min-height:120px"></textarea></div>
     <div class="ai-box">
-      <div class="ai-box-head">✨ ${t('composeAiTools')} <span class="ai-status" id="cm-status"></span></div>
+      <div class="ai-box-head">✨ ${t('composeAiTools')} <span class="ai-status" id="cm-status"></span><span class="cm-lang-wrap">🗣 <select id="cm-lang" class="lang-mini">${composeLangOptions(l)}</select></span></div>
       <div class="ai-tools" id="cm-ai-tools">
+        <button class="ai-chip" onclick="composePersonalizeTemplate()">${t('aiPersonalizeTpl')}</button>
         <button class="ai-chip" onclick="composeRefine('improve')">${t('aiImprove')}</button>
         <button class="ai-chip" onclick="composeRefine('shorter')">${t('aiShorter')}</button>
         <button class="ai-chip" onclick="composeRefine('warmer')">${t('aiWarmer')}</button>
@@ -1155,9 +1170,7 @@ function openCompose(id){
       <button class="btn green" onclick="composeMarkSent()">${t('composeMark')}</button>
     </div>
   </div></div>`;
-  // preselect first template if any
-  const firstTpl=templates.filter(tp=>!tp.deleted)[0];
-  if(firstTpl){ document.getElementById('cm-tpl').value=firstTpl.id; composePickTemplate(); }
+  // Default to free text (no auto-fill). Picking a template fills it; the AI tools personalise from there.
 }
 function composePickTemplate(){
   const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
@@ -1174,6 +1187,20 @@ const AI_REFINE = {
   question:'Keep this message but make sure it ends with one genuine, easy-to-answer question that naturally invites a reply.'
 };
 function leadCtx(l){ return {name:l.name,title:l.title,oldCompany:l.oldCompany,newCompany:l.newCompany,leadType:getLeadType(l),notes:l.notes}; }
+// Guess the prospect's likely language from their location/company text so outreach is written in THEIR language.
+function guessLangName(text){
+  const s=(' '+(text||'')+' ').toLowerCase();
+  if(/germany|deutschland|austria|österreich|osterreich|switzerland|schweiz/.test(s)) return 'German';
+  if(/netherlands|nederland|belgium|belgië|belgie|holland/.test(s)) return 'Dutch';
+  return '';
+}
+function guessLeadLang(l){ return guessLangName(((l&&l.notes)||'')+' '+((l&&l.newCompany)||'')+' '+((l&&l.oldCompany)||'')+' '+((l&&l.title)||'')) || I18N[lang]._name; }
+function composeLang(){ const sel=document.getElementById('cm-lang'); if(sel && sel.value && sel.value!=='auto') return sel.value; return guessLeadLang(leads.find(x=>x.id===composeLeadId)); }
+function composeLangOptions(l){
+  const guess=guessLeadLang(l);
+  return [['auto',t('langAuto')+' · '+guess],['English','English'],['German','Deutsch'],['Dutch','Nederlands']]
+    .map(([v,lab])=>`<option value="${v}">${esc(lab)}</option>`).join('');
+}
 function composeBusy(on){
   const s=document.getElementById('cm-status'); if(s) s.textContent=on?t('aiWorking'):'';
   document.querySelectorAll('#cm-ai-tools button, #cm-gen, #cm-reply-btn').forEach(b=>{ if(b) b.disabled=on; });
@@ -1191,13 +1218,21 @@ async function runComposeAI(prompt){
 async function composeGenerate(){
   const instr=(document.getElementById('cm-ai').value||'').trim();
   const base=instr||'Write a short, warm LinkedIn message congratulating this person on their new role and gently opening a conversation about HR software. Use any notes for a personal touch.';
-  await runComposeAI(`${base}\n\nReply ONLY with the message text, no preamble or quotes, in this language: ${I18N[lang]._name}.`);
+  await runComposeAI(`${base}\n\nReply ONLY with the message text, no preamble or quotes, in this language: ${composeLang()}.`);
+}
+// Personalise the SELECTED template only lightly — keep the template wording, adapt a detail or two for this person.
+async function composePersonalizeTemplate(){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  const sel=document.getElementById('cm-tpl'); const tp=sel?templates.find(x=>x.id===sel.value):null;
+  if(!tp){ toast(t('composePickTplFirst'),true); return; }
+  const base=fillPlaceholders(tp.body,l);
+  await runComposeAI(`Here is a message TEMPLATE (placeholders already filled in):\n"""${base}"""\n\nPersonalise it only LIGHTLY for this specific person: keep the template's structure, tone, length and almost all of its wording — just adapt one or two small details so it feels written for them (use the notes / their job change if helpful). Do NOT rewrite it from scratch. Reply ONLY with the message text, no preamble or quotes, in this language: ${composeLang()}.`);
 }
 async function composeRefine(kind){
   const cur=(document.getElementById('cm-text').value||'').trim();
   if(!cur){ toast(t('composeEmpty'),true); return; }
   const instr=AI_REFINE[kind]; if(!instr) return;
-  await runComposeAI(`${instr}\n\nMESSAGE:\n"""${cur}"""\n\nReply ONLY with the rewritten message text, no preamble or quotes, in this language: ${I18N[lang]._name}.`);
+  await runComposeAI(`${instr}\n\nMESSAGE:\n"""${cur}"""\n\nReply ONLY with the rewritten message text, no preamble or quotes, in this language: ${composeLang()}.`);
 }
 async function composeFollowup(){
   const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
@@ -1209,19 +1244,19 @@ async function composeFollowup(){
   } else {
     ctx='Write a short, friendly, gentle follow-up opener for this person about HoorayHR HR software. Not pushy. Max 3 sentences.';
   }
-  await runComposeAI(`${ctx}\n\nReply ONLY with the message text, in this language: ${I18N[lang]._name}.`);
+  await runComposeAI(`${ctx}\n\nReply ONLY with the message text, in this language: ${composeLang()}.`);
 }
 function toggleReplyBox(){ const b=document.getElementById('cm-reply-box'); if(b) b.style.display=(b.style.display==='none'?'block':'none'); }
 async function composeReplyDraft(){
   const their=(document.getElementById('cm-reply').value||'').trim();
   if(!their){ toast(t('composeReplyEmpty'),true); return; }
-  await runComposeAI(`The person replied to your LinkedIn outreach with:\n"""${their}"""\n\nDraft a warm, concise reply that keeps the conversation natural and gently moves toward a short, no-pressure call about their HR software/processes. Match their tone and answer anything they asked. Max 4 sentences.\n\nReply ONLY with the message text, in this language: ${I18N[lang]._name}.`);
+  await runComposeAI(`The person replied to your LinkedIn outreach with:\n"""${their}"""\n\nDraft a warm, concise reply that keeps the conversation natural and gently moves toward a short, no-pressure call about their HR software/processes. Match their tone and answer anything they asked. Max 4 sentences.\n\nReply ONLY with the message text, in this language: ${composeLang()}.`);
 }
 let composeVariantData=[];
 async function composeVariants(){
   const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
   const instr=(document.getElementById('cm-ai').value||'').trim();
-  const prompt=`Write 3 distinct short LinkedIn outreach variations for this person about HoorayHR (HR software), each max 4 sentences, each with a different angle or opening line.${instr?(' Extra instruction: '+instr+'.'):''} Separate the three variations with a line containing only "---". Reply ONLY with the three messages, in this language: ${I18N[lang]._name}.`;
+  const prompt=`Write 3 distinct short LinkedIn outreach variations for this person about HoorayHR (HR software), each max 4 sentences, each with a different angle or opening line.${instr?(' Extra instruction: '+instr+'.'):''} Separate the three variations with a line containing only "---". Reply ONLY with the three messages, in this language: ${composeLang()}.`;
   composeBusy(true);
   try {
     const r=await n8nCall('ai-message',{system:AI_SYSTEM_PROMPT,prompt,lead:leadCtx(l)});

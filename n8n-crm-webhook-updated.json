@@ -708,7 +708,7 @@
             {
               "id": "eb9a3445-fda9-43ed-9716-ecfa1afa881c",
               "name": "notes",
-              "value": "={{ $json.notes }}",
+              "value": "={{ $json.existingNotes }}",
               "type": "string"
             },
             {
@@ -970,7 +970,7 @@
             {
               "id": "36a7c06b-c3b7-434b-9649-65577ebe3899",
               "name": "notes",
-              "value": "",
+              "value": "={{ $json.notes || \"\" }}",
               "type": "string"
             },
             {
@@ -1300,7 +1300,7 @@
             },
             {
               "id": "a31ebc0e-2e45-4cf5-b458-03382a7edea3",
-              "name": "notes",
+              "name": "existingNotes",
               "value": "={{ $json.notes }}",
               "type": "string"
             },
