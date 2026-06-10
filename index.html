@@ -288,6 +288,31 @@
   .id-opt { text-align: left; height: 40px; padding: 0 14px; border: 1px solid var(--border2); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 14px; }
   .id-opt:hover { border-color: var(--primary); background: var(--primary-bg); }
   .id-opt.on { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+
+  /* ── AI helpers (compose) + AI coach (messages) ─────────────────────────── */
+  .ai-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 4px; }
+  .ai-box-head { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .ai-status { font-weight: 600; color: var(--primary); }
+  .ai-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ai-chip { height: 30px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 12px; cursor: pointer; font-family: inherit; }
+  .ai-chip:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+  .ai-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ai-custom { display: flex; gap: 6px; margin-top: 10px; }
+  .ai-custom input { flex: 1; height: 34px; padding: 0 10px; font-size: 13px; border: 1px solid var(--border2); border-radius: 8px; background: var(--bg); color: var(--text); }
+  .ai-link { margin-top: 10px; background: none; border: none; color: var(--primary); font-size: 12px; cursor: pointer; padding: 0; font-family: inherit; text-align: left; }
+  .ai-link:hover { text-decoration: underline; }
+  #cm-variants { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .cm-var-h { font-size: 12px; font-weight: 600; color: var(--text2); }
+  .cm-var { text-align: left; border: 1px solid var(--border2); border-radius: 10px; padding: 10px 12px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; line-height: 1.5; white-space: pre-wrap; font-family: inherit; }
+  .cm-var:hover { border-color: var(--primary); background: var(--primary-bg); }
+  .coach-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 18px; box-shadow: var(--shadow-card); }
+  .coach-card.due { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+  .coach-head { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .coach-badge { font-size: 10px; font-weight: 700; background: var(--primary); color: #fff; border-radius: 999px; padding: 2px 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .coach-sub { font-size: 12px; color: var(--text2); margin: 4px 0 10px; line-height: 1.5; }
+  .coach-text { background: var(--surface2); border-radius: 10px; padding: 12px 14px; line-height: 1.65; color: var(--text); font-size: 13px; }
+  .coach-empty { font-size: 12px; color: var(--text3); }
+  .coach-loading { font-size: 13px; color: var(--primary); }
 </style>
 </head>
 <body>
@@ -400,6 +425,7 @@ const KEY_SS='li_crm_n8n_key', CACHE_SS='li_crm_cache_v1', TPL_SS='li_crm_templa
 const ENV_LS='li_crm_env', LANG_LS='li_crm_lang';
 const KEY_BRIDGE='li_crm_bridge_key', ENV_BRIDGE='li_crm_bridge_env', USER_BRIDGE='li_crm_bridge_user';
 const USER_LS='li_crm_user';
+const SENT_LS='li_crm_sent_count', COACH_SEEN_LS='li_crm_coach_seen';
 // ── Team (hardcoded) ─────────────────────────────────────────────────────────
 // Who can own a contact. `id` is what gets stored in the sheet's `sdr` array;
 // `flag` + `label` are display only. The two "Other" entries are disambiguated
@@ -505,6 +531,17 @@ const I18N = {
     sdrMeaning:'SDR — who owns the contact', sdrExpl:'After entering the key you pick who you are. Contacts you add or scrape are tagged with your name (the “sdr” column in Google Sheets). A contact can have several owners. Use the “All SDRs” filter to view and work other people’s contacts too.',
     tagMeaning:'Tags — your own labels', tagExpl:'Free labels you give a contact, on top of the automatic direct/partner type, to group or filter them — e.g. priority, sector or campaign. Edit them on a lead; filter with the “All tags” dropdown. They are saved to Google Sheets.',
     whSdrTagWhen:'On Save / import', whSdrTagDoes:'Owner (sdr) and tags travel with every lead into Google Sheets and back (no separate webhook).',
+    // ── v5: AI assist + coach ──
+    composeAiTools:'AI helpers', aiWorking:'⏳ Working…',
+    aiImprove:'✨ Improve', aiShorter:'✂️ Shorter', aiWarmer:'☀️ Warmer', aiPersonal:'💬 More personal', aiQuestion:'❓ Add question',
+    aiFollowup:'✍️ Follow-up', aiVariants:'🎭 3 variants',
+    composeVarPick:'Tap a version to use it:',
+    composeReplyToggle:'↩️ They replied? Draft a reply', composeReplyPh:'Paste what they wrote back…', composeReplyBtn:'✨ Draft reply', composeReplyEmpty:'Paste their reply first',
+    coachTitle:'🧠 AI outreach coach', coachSub:'Get specific feedback on your recent messages and how to improve — in your language.',
+    coachRun:'Analyse my messages', coachAnalyzing:'Reading your recent messages…',
+    coachHint:'Send a few messages, then let the coach review what works and what to tweak.',
+    coachNone:'Send at least 2 messages first — then I can give useful feedback.',
+    coachDueBadge:'New feedback', coachNudge:'🧠 {n} messages sent — get AI feedback in the Messages tab.',
   },
   de: {
     _name:'Deutsch',
@@ -596,6 +633,17 @@ const I18N = {
     sdrMeaning:'SDR — wem der Kontakt gehört', sdrExpl:'Nach Eingabe des Schlüssels wählst du, wer du bist. Kontakte, die du hinzufügst oder scrapest, bekommen deinen Namen (Spalte „sdr“ in Google Sheets). Ein Kontakt kann mehrere Besitzer haben. Über den Filter „Alle SDRs“ siehst und bearbeitest du auch die Kontakte anderer.',
     tagMeaning:'Tags — deine eigenen Labels', tagExpl:'Frei vergebbare Labels für einen Kontakt, zusätzlich zum automatischen Direkt-/Partner-Typ, zum Gruppieren oder Filtern — z. B. Priorität, Branche oder Kampagne. Bearbeite sie am Lead; filtere über das Dropdown „Alle Tags“. Sie werden in Google Sheets gespeichert.',
     whSdrTagWhen:'Beim Speichern / Import', whSdrTagDoes:'Besitzer (sdr) und Tags wandern mit jedem Lead in Google Sheets und zurück (kein eigener Webhook).',
+    // ── v5: KI-Assistenz + Coach ──
+    composeAiTools:'KI-Helfer', aiWorking:'⏳ Arbeite…',
+    aiImprove:'✨ Verbessern', aiShorter:'✂️ Kürzer', aiWarmer:'☀️ Wärmer', aiPersonal:'💬 Persönlicher', aiQuestion:'❓ Frage ergänzen',
+    aiFollowup:'✍️ Nachfassen', aiVariants:'🎭 3 Varianten',
+    composeVarPick:'Tippe eine Version an, um sie zu übernehmen:',
+    composeReplyToggle:'↩️ Geantwortet? Antwort entwerfen', composeReplyPh:'Füge ein, was zurückkam…', composeReplyBtn:'✨ Antwort entwerfen', composeReplyEmpty:'Zuerst ihre Antwort einfügen',
+    coachTitle:'🧠 KI-Outreach-Coach', coachSub:'Konkretes Feedback zu deinen letzten Nachrichten und wie du besser wirst — in deiner Sprache.',
+    coachRun:'Meine Nachrichten analysieren', coachAnalyzing:'Lese deine letzten Nachrichten…',
+    coachHint:'Sende ein paar Nachrichten, dann prüft der Coach, was funktioniert und was du verbessern kannst.',
+    coachNone:'Sende zuerst mindestens 2 Nachrichten — dann gibt es nützliches Feedback.',
+    coachDueBadge:'Neues Feedback', coachNudge:'🧠 {n} Nachrichten gesendet — hol dir KI-Feedback im Nachrichten-Tab.',
   },
   nl: {
     _name:'Nederlands',
@@ -687,6 +735,17 @@ const I18N = {
     sdrMeaning:'SDR — van wie het contact is', sdrExpl:'Na het invoeren van de sleutel kies je wie je bent. Contacten die je toevoegt of scrapet krijgen jouw naam (kolom “sdr” in Google Sheets). Een contact kan meerdere eigenaren hebben. Met het filter “Alle SDR’s” bekijk en bewerk je ook de contacten van anderen.',
     tagMeaning:'Tags — je eigen labels', tagExpl:'Vrije labels die je een contact geeft, naast het automatische direct/partner-type, om te groeperen of filteren — bijv. prioriteit, sector of campagne. Bewerk ze op een lead; filter met het dropdown “Alle tags”. Ze worden opgeslagen in Google Sheets.',
     whSdrTagWhen:'Bij Opslaan / import', whSdrTagDoes:'Eigenaar (sdr) en tags reizen met elke lead mee naar Google Sheets en terug (geen aparte webhook).',
+    // ── v5: AI-hulp + coach ──
+    composeAiTools:'AI-hulp', aiWorking:'⏳ Bezig…',
+    aiImprove:'✨ Verbeteren', aiShorter:'✂️ Korter', aiWarmer:'☀️ Warmer', aiPersonal:'💬 Persoonlijker', aiQuestion:'❓ Vraag erbij',
+    aiFollowup:'✍️ Opvolgen', aiVariants:'🎭 3 varianten',
+    composeVarPick:'Tik een versie aan om te gebruiken:',
+    composeReplyToggle:'↩️ Geantwoord? Stel een antwoord op', composeReplyPh:'Plak wat zij terugschreven…', composeReplyBtn:'✨ Antwoord opstellen', composeReplyEmpty:'Plak eerst hun antwoord',
+    coachTitle:'🧠 AI-outreachcoach', coachSub:'Concrete feedback op je recente berichten en hoe je beter wordt — in jouw taal.',
+    coachRun:'Mijn berichten analyseren', coachAnalyzing:'Je recente berichten lezen…',
+    coachHint:'Stuur een paar berichten, laat de coach dan beoordelen wat werkt en wat beter kan.',
+    coachNone:'Stuur eerst minstens 2 berichten — dan kan ik nuttige feedback geven.',
+    coachDueBadge:'Nieuwe feedback', coachNudge:'🧠 {n} berichten verstuurd — haal AI-feedback in het tabblad Berichten.',
   }
 };
 let lang = localStorage.getItem(LANG_LS) || 'en';
@@ -894,7 +953,7 @@ function renderViewToggle(){
 function setViewMode(m){ viewMode=m; localStorage.setItem('li_crm_viewmode',m); render(); }
 function render(){
   if(!document.getElementById('app-shell').classList.contains('ready')) return;
-  renderStats(); renderViewToggle(); renderFilters(); renderUserChip();
+  renderStats(); renderViewToggle(); renderFilters(); renderUserChip(); updateCoachNudge();
   const listEl=document.getElementById('leads'), boardEl=document.getElementById('board');
   if(viewMode==='board'){
     if(listEl) listEl.style.display='none';
@@ -1067,11 +1126,28 @@ function openCompose(id){
   document.getElementById('modal').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal wide">
     <h2>${t('composeTitle')} — ${esc(l.name)}</h2>
     <div class="field"><label>${t('composePick')}</label><select id="cm-tpl" onchange="composePickTemplate()">${tplOpts}</select></div>
+    <div id="cm-variants"></div>
     <div class="field"><label>${t('composeMsg')}</label><textarea id="cm-text" style="min-height:120px"></textarea></div>
-    <div class="field" style="background:var(--surface2);border-radius:10px;padding:10px">
-      <label>✨ ${t('composeAiPrompt')}</label>
-      <input id="cm-ai" placeholder="${escA(t('composeAiPh'))}">
-      <button class="btn sm" style="margin-top:8px" id="cm-gen" onclick="composeGenerate()">${t('composeGen')}</button>
+    <div class="ai-box">
+      <div class="ai-box-head">✨ ${t('composeAiTools')} <span class="ai-status" id="cm-status"></span></div>
+      <div class="ai-tools" id="cm-ai-tools">
+        <button class="ai-chip" onclick="composeRefine('improve')">${t('aiImprove')}</button>
+        <button class="ai-chip" onclick="composeRefine('shorter')">${t('aiShorter')}</button>
+        <button class="ai-chip" onclick="composeRefine('warmer')">${t('aiWarmer')}</button>
+        <button class="ai-chip" onclick="composeRefine('personal')">${t('aiPersonal')}</button>
+        <button class="ai-chip" onclick="composeRefine('question')">${t('aiQuestion')}</button>
+        <button class="ai-chip" onclick="composeFollowup()">${t('aiFollowup')}</button>
+        <button class="ai-chip" onclick="composeVariants()">${t('aiVariants')}</button>
+      </div>
+      <div class="ai-custom">
+        <input id="cm-ai" placeholder="${escA(t('composeAiPh'))}" onkeydown="if(event.key==='Enter')composeGenerate()">
+        <button class="btn sm" id="cm-gen" onclick="composeGenerate()">${t('composeGen')}</button>
+      </div>
+      <button class="ai-link" id="cm-reply-toggle" onclick="toggleReplyBox()">${t('composeReplyToggle')}</button>
+      <div id="cm-reply-box" style="display:none;margin-top:8px">
+        <textarea id="cm-reply" placeholder="${escA(t('composeReplyPh'))}" style="min-height:64px"></textarea>
+        <button class="btn sm" id="cm-reply-btn" style="margin-top:6px" onclick="composeReplyDraft()">${t('composeReplyBtn')}</button>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="composeCopy()">${t('composeCopy')}</button>
@@ -1089,18 +1165,79 @@ function composePickTemplate(){
   const tp=templates.find(x=>x.id===id);
   if(tp) document.getElementById('cm-text').value=fillPlaceholders(tp.body,l);
 }
-async function composeGenerate(){
-  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
-  const btn=document.getElementById('cm-gen'); const instr=document.getElementById('cm-ai').value.trim();
-  const userPrompt=(instr||'Write a short, warm LinkedIn message congratulating this person on their new role and gently opening a conversation about HR software.')+`\n\nReply in this language: ${I18N[lang]._name}.`;
-  btn.disabled=true; btn.textContent=t('composeGening');
-  try {
-    const r=await n8nCall('ai-message',{system:AI_SYSTEM_PROMPT,prompt:userPrompt,lead:{name:l.name,title:l.title,oldCompany:l.oldCompany,newCompany:l.newCompany,leadType:getLeadType(l),notes:l.notes}});
-    const text=(r&&r.text)?r.text:'';
-    if(text) document.getElementById('cm-text').value=text;
-  } catch(e){ toast(t('aiFail')+(e.message==='401'?t('badKey'):e.message),true); }
-  finally { btn.disabled=false; btn.textContent=t('composeGen'); }
+// ── AI assist in the composer — all built on the single `ai-message` action ──
+const AI_REFINE = {
+  improve:'Improve this message: make it sound natural, warm and genuinely personal, and fix any awkward or robotic phrasing. Keep it short (max 4 sentences) and keep the original intent and any personal details.',
+  shorter:'Make this message clearly shorter and punchier (2-3 sentences max) while keeping it warm and personal.',
+  warmer:'Make this message warmer, friendlier and more human, without becoming salesy.',
+  personal:"Make this message more personal and specific: build on this person's recent job change and any notes provided, and remove anything generic or templated.",
+  question:'Keep this message but make sure it ends with one genuine, easy-to-answer question that naturally invites a reply.'
+};
+function leadCtx(l){ return {name:l.name,title:l.title,oldCompany:l.oldCompany,newCompany:l.newCompany,leadType:getLeadType(l),notes:l.notes}; }
+function composeBusy(on){
+  const s=document.getElementById('cm-status'); if(s) s.textContent=on?t('aiWorking'):'';
+  document.querySelectorAll('#cm-ai-tools button, #cm-gen, #cm-reply-btn').forEach(b=>{ if(b) b.disabled=on; });
 }
+async function runComposeAI(prompt){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  composeBusy(true);
+  try {
+    const r=await n8nCall('ai-message',{system:AI_SYSTEM_PROMPT,prompt,lead:leadCtx(l)});
+    const text=(r&&r.text)?String(r.text).trim():'';
+    if(text){ const ta=document.getElementById('cm-text'); if(ta) ta.value=text; const v=document.getElementById('cm-variants'); if(v) v.innerHTML=''; }
+  } catch(e){ toast(t('aiFail')+(e.message==='401'?t('badKey'):e.message),true); }
+  finally { composeBusy(false); }
+}
+async function composeGenerate(){
+  const instr=(document.getElementById('cm-ai').value||'').trim();
+  const base=instr||'Write a short, warm LinkedIn message congratulating this person on their new role and gently opening a conversation about HR software. Use any notes for a personal touch.';
+  await runComposeAI(`${base}\n\nReply ONLY with the message text, no preamble or quotes, in this language: ${I18N[lang]._name}.`);
+}
+async function composeRefine(kind){
+  const cur=(document.getElementById('cm-text').value||'').trim();
+  if(!cur){ toast(t('composeEmpty'),true); return; }
+  const instr=AI_REFINE[kind]; if(!instr) return;
+  await runComposeAI(`${instr}\n\nMESSAGE:\n"""${cur}"""\n\nReply ONLY with the rewritten message text, no preamble or quotes, in this language: ${I18N[lang]._name}.`);
+}
+async function composeFollowup(){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  const msgs=Array.isArray(l.messagesSent)?l.messagesSent:[]; const last=msgs[msgs.length-1];
+  let ctx;
+  if(last){
+    const days=Math.max(1,Math.round((Date.now()-new Date(last.sentAt||Date.now()))/86400000));
+    ctx=`This person has NOT replied to your earlier LinkedIn message (sent about ${days} day(s) ago):\n"""${last.text}"""\n\nWrite a short, friendly FOLLOW-UP that gently nudges and adds a little extra value or a fresh angle. Do NOT repeat the first message and do not be pushy. Max 3 sentences.`;
+  } else {
+    ctx='Write a short, friendly, gentle follow-up opener for this person about HoorayHR HR software. Not pushy. Max 3 sentences.';
+  }
+  await runComposeAI(`${ctx}\n\nReply ONLY with the message text, in this language: ${I18N[lang]._name}.`);
+}
+function toggleReplyBox(){ const b=document.getElementById('cm-reply-box'); if(b) b.style.display=(b.style.display==='none'?'block':'none'); }
+async function composeReplyDraft(){
+  const their=(document.getElementById('cm-reply').value||'').trim();
+  if(!their){ toast(t('composeReplyEmpty'),true); return; }
+  await runComposeAI(`The person replied to your LinkedIn outreach with:\n"""${their}"""\n\nDraft a warm, concise reply that keeps the conversation natural and gently moves toward a short, no-pressure call about their HR software/processes. Match their tone and answer anything they asked. Max 4 sentences.\n\nReply ONLY with the message text, in this language: ${I18N[lang]._name}.`);
+}
+let composeVariantData=[];
+async function composeVariants(){
+  const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
+  const instr=(document.getElementById('cm-ai').value||'').trim();
+  const prompt=`Write 3 distinct short LinkedIn outreach variations for this person about HoorayHR (HR software), each max 4 sentences, each with a different angle or opening line.${instr?(' Extra instruction: '+instr+'.'):''} Separate the three variations with a line containing only "---". Reply ONLY with the three messages, in this language: ${I18N[lang]._name}.`;
+  composeBusy(true);
+  try {
+    const r=await n8nCall('ai-message',{system:AI_SYSTEM_PROMPT,prompt,lead:leadCtx(l)});
+    const raw=(r&&r.text)?String(r.text):'';
+    const parts=raw.split(/\n?-{3,}\n?/).map(s=>s.replace(/^\s*(?:\d+[\).\-:]|[-*•])\s*/,'').trim()).filter(Boolean).slice(0,3);
+    renderVariants(parts);
+  } catch(e){ toast(t('aiFail')+(e.message==='401'?t('badKey'):e.message),true); }
+  finally { composeBusy(false); }
+}
+function renderVariants(parts){
+  composeVariantData=parts||[];
+  const box=document.getElementById('cm-variants'); if(!box)return;
+  if(!parts||!parts.length){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="cm-var-h">${t('composeVarPick')}</div>`+parts.map((p,i)=>`<button class="cm-var" onclick="composeUseVariant(${i})">${esc(p)}</button>`).join('');
+}
+function composeUseVariant(i){ const v=composeVariantData[i]; if(v!=null){ const ta=document.getElementById('cm-text'); if(ta) ta.value=v; const box=document.getElementById('cm-variants'); if(box) box.innerHTML=''; } }
 function composeCopy(){ const ta=document.getElementById('cm-text'); ta.select(); try{ document.execCommand('copy'); }catch(e){} toast(t('composeCopied')); }
 function composeMarkSent(){
   const l=leads.find(x=>x.id===composeLeadId); if(!l)return;
@@ -1110,8 +1247,10 @@ function composeMarkSent(){
   if(!Array.isArray(l.messagesSent)) l.messagesSent=[];
   l.messagesSent.push({templateId:tplId||'', text, sentAt:new Date().toISOString()});
   l.status='messaged';
+  const n=bumpSent();
   markDirty(); closeModal(); render();
   toast(t('msgSent'));
+  if(coachDue()) setTimeout(()=>toast(t('coachNudge',{n})),500);
 }
 
 function openAdd(){ document.getElementById('modal').innerHTML=modalHTML(); }
@@ -1238,6 +1377,13 @@ function renderHelpView(){
 function renderMessagesView(){
   const stats=getMessageStats();
   let h=`<div style="font-size:13px;color:var(--text2);margin-bottom:16px">${t('msgIntro')}</div>`;
+  const due=coachDue();
+  h+=`<div class="coach-card${due?' due':''}">
+    <div class="coach-head">${t('coachTitle')}${due?` <span class="coach-badge">${t('coachDueBadge')}</span>`:''}</div>
+    <div class="coach-sub">${t('coachSub')}</div>
+    <div id="coach-body">${coachResult?`<div class="coach-text">${esc(coachResult).replace(/\n/g,'<br>')}</div>`:`<div class="coach-empty">${t('coachHint')}</div>`}</div>
+    <button class="btn primary" style="margin-top:10px" onclick="runCoach()">${t('coachRun')}</button>
+  </div>`;
   h+=`<div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:18px"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('analytics')}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">`;
   h+=sbox(stats.totalSent,t('sent'),'')+sbox(stats.toLead,t('toLead'),'var(--green)')+sbox(stats.toUnq,t('toUnq'),'#A32D2D')+sbox(stats.conversionPct+'%',t('conversion'),'var(--blue)');
   h+=`</div></div><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('templates')}</div>`;
@@ -1262,6 +1408,39 @@ function getMessageStats(){ const s={totalSent:0,toLead:0,toUnq:0,perTemplate:{}
   leads.forEach(l=>(l.messagesSent||[]).forEach(m=>{ s.totalSent++; if(s.perTemplate[m.templateId]){ s.perTemplate[m.templateId].sent++; if(l.status==='lead'){s.toLead++;s.perTemplate[m.templateId].lead++;} if(l.status==='unqualified'){s.toUnq++;s.perTemplate[m.templateId].unq++;} } }));
   s.conversionPct=s.totalSent?Math.round(s.toLead/s.totalSent*100):0;
   Object.keys(s.perTemplate).forEach(id=>{const x=s.perTemplate[id];x.pct=x.sent?Math.round(x.lead/x.sent*100):0;}); return s; }
+
+// ── AI outreach coach — feedback on the SDR's own recent messages + outcomes ──
+// Built on the same `ai-message` action (no n8n change). Auto-nudges every 10 sent.
+let coachResult='';
+function sentCount(){ return parseInt(localStorage.getItem(SENT_LS)||'0',10)||0; }
+function bumpSent(){ const n=sentCount()+1; localStorage.setItem(SENT_LS,String(n)); updateCoachNudge(); return n; }
+function coachDue(){ const seen=parseInt(localStorage.getItem(COACH_SEEN_LS)||'0',10)||0; return sentCount()-seen>=10; }
+function updateCoachNudge(){ const it=document.querySelector('.nav-item[data-view="messages"]'); if(it){ const base=t('navMessages'); it.textContent = coachDue()?(base+' 🔴'):base; } }
+function outcomeLabel(st){ return (st==='lead'||st==='in-pipedrive')?'positive — replied / progressed':((st==='unqualified'||st==='not-interested')?'no / not interested':'awaiting reply'); }
+function coachDataset(){
+  const me=getCurrentUser();
+  const mine = me ? leads.filter(l=>(l.sdr||[]).includes(me)) : [];
+  const src = mine.length ? mine : leads;
+  const rows=[];
+  src.forEach(l=>(Array.isArray(l.messagesSent)?l.messagesSent:[]).forEach(m=>{ if(m&&m.text) rows.push({when:m.sentAt||'', text:m.text, status:l.status}); }));
+  rows.sort((a,b)=> new Date(b.when||0)-new Date(a.when||0));
+  return rows.slice(0,12);
+}
+async function runCoach(){
+  const body=document.getElementById('coach-body'); if(!body)return;
+  const rows=coachDataset();
+  if(rows.length<2){ body.innerHTML=`<div class="coach-empty">${t('coachNone')}</div>`; return; }
+  const data=rows.map((r,i)=>`#${i+1} [outcome: ${outcomeLabel(r.status)}]\n${r.text}`).join('\n\n');
+  const system='You are a friendly, practical sales coach for an SDR at HoorayHR who does LinkedIn outreach to people who recently changed jobs. Give concrete, kind, specific and actionable feedback. Never invent facts about the prospects.';
+  const prompt=`Here are my recent LinkedIn outreach messages and their outcomes:\n\n${data}\n\nCoach me:\n1. What is working well (be specific and reference my own wording).\n2. Three concrete improvements — for each, rewrite a short improved example based on one of my own messages.\n3. One short encouraging sentence.\nUse short clear headings, keep it practical and not too long. Reply in this language: ${I18N[lang]._name}.`;
+  body.innerHTML=`<div class="coach-loading">⏳ ${t('coachAnalyzing')}</div>`;
+  try {
+    const r=await n8nCall('ai-message',{system,prompt,lead:{messages:rows.length}});
+    coachResult=(r&&r.text)?String(r.text).trim():'';
+    body.innerHTML = coachResult ? `<div class="coach-text">${esc(coachResult).replace(/\n/g,'<br>')}</div>` : `<div class="coach-empty">${t('aiFail')}</div>`;
+    localStorage.setItem(COACH_SEEN_LS,String(sentCount())); updateCoachNudge();
+  } catch(e){ body.innerHTML=`<div class="coach-empty">${t('aiFail')}${(e.message==='401'?t('badKey'):e.message)}</div>`; }
+}
 </script>
 </body>
 </html>
