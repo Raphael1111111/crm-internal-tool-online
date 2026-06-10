@@ -1410,7 +1410,6 @@ function renderHelpView(){
 }
 
 function renderMessagesView(){
-  const stats=getMessageStats();
   let h=`<div style="font-size:13px;color:var(--text2);margin-bottom:16px">${t('msgIntro')}</div>`;
   const due=coachDue();
   h+=`<div class="coach-card${due?' due':''}">
@@ -1419,30 +1418,21 @@ function renderMessagesView(){
     <div id="coach-body">${coachResult?`<div class="coach-text">${esc(coachResult).replace(/\n/g,'<br>')}</div>`:`<div class="coach-empty">${t('coachHint')}</div>`}</div>
     <button class="btn primary" style="margin-top:10px" onclick="runCoach()">${t('coachRun')}</button>
   </div>`;
-  h+=`<div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:18px"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('analytics')}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">`;
-  h+=sbox(stats.totalSent,t('sent'),'')+sbox(stats.toLead,t('toLead'),'var(--green)')+sbox(stats.toUnq,t('toUnq'),'#A32D2D')+sbox(stats.conversionPct+'%',t('conversion'),'var(--blue)');
-  h+=`</div></div><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('templates')}</div>`;
-  templates.filter(tp=>!tp.deleted).forEach(tp=>{ const ts=stats.perTemplate[tp.id]||{sent:0,lead:0,unq:0,pct:0};
+  h+=`<div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:10px">${t('templates')}</div>`;
+  templates.filter(tp=>!tp.deleted).forEach(tp=>{
     h+=`<div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--surface)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-      <input id="tn-${tp.id}" value="${escA(tp.name)}" style="flex:1;font-size:14px;font-weight:600;border:none;background:transparent;color:var(--text);font-family:inherit">
-      <div style="display:flex;gap:8px;font-size:11px;color:var(--text2)"><span>📤 ${ts.sent}</span><span style="color:var(--green)">✓ ${ts.lead}</span><span style="color:#A32D2D">✗ ${ts.unq}</span><span style="color:var(--blue);font-weight:600">${ts.pct}%</span></div></div>
+      <input id="tn-${tp.id}" value="${escA(tp.name)}" style="width:100%;font-size:14px;font-weight:600;border:none;background:transparent;color:var(--text);font-family:inherit;margin-bottom:8px">
       <textarea id="tb-${tp.id}" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--text);min-height:90px;font-family:inherit;line-height:1.5">${escH(tp.body)}</textarea>
       <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end"><button class="btn sm" onclick="saveTemplate('${tp.id}')">${t('update')}</button><button class="btn sm danger" onclick="deleteTemplate('${tp.id}')">🗑</button></div></div>`; });
   h+=`<button class="btn primary" onclick="addTemplate()" style="width:100%">${t('newTemplate')}</button>`;
   h+=`<div style="font-size:11px;color:var(--text3);margin-top:12px">💡 ${t('placeholderHint')}</div>`;
   document.getElementById('messages-content').innerHTML=h;
 }
-function sbox(v,l,c){return `<div style="background:var(--surface);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:600;${c?'color:'+c:''}">${v}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">${l}</div></div>`;}
 function escH(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escA(s){return (s||'').replace(/"/g,'&quot;');}
 function saveTemplate(id){ const tp=templates.find(x=>x.id===id); if(!tp)return; tp.name=document.getElementById('tn-'+id).value.trim()||'—'; tp.body=document.getElementById('tb-'+id).value; markDirty(); persistTemplates(); renderMessagesView(); }
 function deleteTemplate(id){ if(!confirm(t('delConfirm')))return; const tp=templates.find(x=>x.id===id); if(tp) tp.deleted=true; markDirty(); persistTemplates(); renderMessagesView(); }
 function addTemplate(){ templates.push({id:'t'+Date.now()+Math.random().toString(36).slice(2,5),name:t('newTemplate').replace('➕ ',''),body:'Hoi {voornaam}, ...'}); markDirty(); persistTemplates(); renderMessagesView(); }
-function getMessageStats(){ const s={totalSent:0,toLead:0,toUnq:0,perTemplate:{}}; templates.filter(tp=>!tp.deleted).forEach(tp=>s.perTemplate[tp.id]={sent:0,lead:0,unq:0,pct:0});
-  leads.forEach(l=>(l.messagesSent||[]).forEach(m=>{ s.totalSent++; if(s.perTemplate[m.templateId]){ s.perTemplate[m.templateId].sent++; if(l.status==='lead'){s.toLead++;s.perTemplate[m.templateId].lead++;} if(l.status==='unqualified'){s.toUnq++;s.perTemplate[m.templateId].unq++;} } }));
-  s.conversionPct=s.totalSent?Math.round(s.toLead/s.totalSent*100):0;
-  Object.keys(s.perTemplate).forEach(id=>{const x=s.perTemplate[id];x.pct=x.sent?Math.round(x.lead/x.sent*100):0;}); return s; }
 
 // ── AI outreach coach — feedback on the SDR's own recent messages + outcomes ──
 // Built on the same `ai-message` action (no n8n change). Auto-nudges every 10 sent.
