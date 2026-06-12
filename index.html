@@ -289,6 +289,7 @@
   .filter-select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
   .lead-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .sdr-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--text2); font-weight: 600; border: 1px solid var(--border); }
+  .campaign-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 2px; }
   .tag-chip { font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--primary-bg); color: var(--primary-dark); font-weight: 600; cursor: pointer; border: 1px solid transparent; }
   .tag-chip:hover { background: var(--primary); color: #fff; }
   .kcard .kc-foot .sdr-chip, .kcard .kc-foot .tag-chip { font-size: 10px; padding: 1px 7px; }
@@ -578,7 +579,7 @@ const I18N = {
     whAiWhen:'From “Send message”', whAiDoes:'Generate a personalised message draft with AI instead of a fixed template.',
     whPdWhen:'On “Lead” / button', whPdDoes:'Create a Person + Organisation + Deal in Pipedrive, with a context note about the job change.',
     whEnrichWhen:'After import', whEnrichDoes:'Enrich a lead (company size, sector, email) from an external source.',
-    whTagWhen:'Manual / auto', whTagDoes:'Add custom tags (e.g. priority, sector, campaign) beyond the built-in lead type.',
+    whTagWhen:'On add / scrape', whTagDoes:'Every lead is filed under a campaign (the outreach it came from). Chosen when you add or scrape; stored in the “tags” column.',
     // ── v2 additions ──
     pdAdd:'➕ Pipedrive', pdConfirm:'Create a Pipedrive deal for {name}?', pdSyncAsk:'{name} is not in Pipedrive yet. Create the deal now?',
     pdAdding:'⏳ Adding to Pipedrive…', pdAdded:'✅ Added to Pipedrive', pdFail:'❌ Pipedrive failed: ', pdAlready:'In Pipedrive ✓',
@@ -599,11 +600,11 @@ const I18N = {
     identityTitle:'Who are you?', identityIntro:'Pick your name. New contacts you add or scrape get assigned to you. You can change this anytime via the chip in the top bar.',
     identityTip:'Your identity — click to change', identitySet:'Set name',
     fSdr:'Assigned to (SDR)', sdrHint:'A contact can belong to several people — tick everyone responsible.',
-    fTags:'Tags', tagsHint:'Comma-separated, e.g. priority, fintech, event.',
-    allSdr:'All SDRs', unassignedSdr:'Unassigned', allTags:'All tags', untagged:'Untagged',
+    fTags:'Campaign', tagsHint:'Pick an existing campaign or type a new one. At least one campaign is required; separate several with commas.', campaignRequired:'Please pick at least one campaign for this lead.',
+    allSdr:'All SDRs', unassignedSdr:'Unassigned', allTags:'All campaigns', untagged:'No campaign',
     sdrMeaning:'SDR — who owns the contact', sdrExpl:'After entering the key you pick who you are. Contacts you add or scrape are tagged with your name (the “sdr” column in Google Sheets). A contact can have several owners. Use the “All SDRs” filter to view and work other people’s contacts too.',
-    tagMeaning:'Tags — your own labels', tagExpl:'Free labels you give a contact, on top of the automatic direct/partner type, to group or filter them — e.g. priority, sector or campaign. Edit them on a lead; filter with the “All tags” dropdown. They are saved to Google Sheets.',
-    whSdrTagWhen:'On Save / import', whSdrTagDoes:'Owner (sdr) and tags travel with every lead into Google Sheets and back (no separate webhook).',
+    tagMeaning:'Campaign — group your outreach', tagExpl:'Every lead belongs to at least one campaign — the outreach action it came from (e.g. “Q3 job-changers”, an event, a sector push). Pick an existing campaign or type a new one when you add a lead; filter with the “All campaigns” dropdown. Stored in the “tags” column in Google Sheets.',
+    whSdrTagWhen:'On Save / import', whSdrTagDoes:'Owner (sdr) and campaign (the “tags” column) travel with every lead into Google Sheets and back (no separate webhook).',
     // ── v5: AI assist + coach ──
     composeAiTools:'AI helpers', aiWorking:'⏳ Working…',
     aiImprove:'✨ Improve', aiShorter:'✂️ Shorter', aiWarmer:'☀️ Warmer', aiPersonal:'💬 More personal', aiQuestion:'❓ Add question',
@@ -705,7 +706,7 @@ const I18N = {
     whAiWhen:'Bei „Nachricht senden“', whAiDoes:'Personalisierten Nachrichtenentwurf mit KI erzeugen statt fester Vorlage.',
     whPdWhen:'Bei „Lead“ / Button', whPdDoes:'Person + Organisation + Deal in Pipedrive anlegen, mit Kontext-Notiz zum Jobwechsel.',
     whEnrichWhen:'Nach dem Import', whEnrichDoes:'Lead anreichern (Unternehmensgröße, Branche, E-Mail) aus externer Quelle.',
-    whTagWhen:'Manuell / automatisch', whTagDoes:'Eigene Tags hinzufügen (z. B. Priorität, Branche, Kampagne) über den Lead-Typ hinaus.',
+    whTagWhen:'Beim Hinzufügen / Scrapen', whTagDoes:'Jeder Lead wird einer Kampagne zugeordnet (das Outreach, aus dem er stammt). Wird beim Hinzufügen/Scrapen gewählt; in der Spalte „tags“ gespeichert.',
     // ── v2 ──
     pdAdd:'➕ Pipedrive', pdConfirm:'Einen Pipedrive-Deal für {name} anlegen?', pdSyncAsk:'{name} ist noch nicht in Pipedrive. Deal jetzt anlegen?',
     pdAdding:'⏳ Wird zu Pipedrive hinzugefügt…', pdAdded:'✅ Zu Pipedrive hinzugefügt', pdFail:'❌ Pipedrive fehlgeschlagen: ', pdAlready:'In Pipedrive ✓',
@@ -726,11 +727,11 @@ const I18N = {
     identityTitle:'Wer bist du?', identityIntro:'Wähle deinen Namen. Neue Kontakte, die du hinzufügst oder scrapest, werden dir zugewiesen. Du kannst das jederzeit über den Chip oben rechts ändern.',
     identityTip:'Deine Identität — zum Ändern klicken', identitySet:'Name wählen',
     fSdr:'Zugewiesen an (SDR)', sdrHint:'Ein Kontakt kann zu mehreren Personen gehören — hake alle Zuständigen an.',
-    fTags:'Tags', tagsHint:'Kommagetrennt, z. B. priorität, fintech, event.',
-    allSdr:'Alle SDRs', unassignedSdr:'Nicht zugewiesen', allTags:'Alle Tags', untagged:'Ohne Tag',
+    fTags:'Kampagne', tagsHint:'Wähle eine bestehende Kampagne oder gib eine neue ein. Mindestens eine Kampagne ist Pflicht; mehrere mit Komma trennen.', campaignRequired:'Bitte wähle mindestens eine Kampagne für diesen Lead.',
+    allSdr:'Alle SDRs', unassignedSdr:'Nicht zugewiesen', allTags:'Alle Kampagnen', untagged:'Ohne Kampagne',
     sdrMeaning:'SDR — wem der Kontakt gehört', sdrExpl:'Nach Eingabe des Schlüssels wählst du, wer du bist. Kontakte, die du hinzufügst oder scrapest, bekommen deinen Namen (Spalte „sdr“ in Google Sheets). Ein Kontakt kann mehrere Besitzer haben. Über den Filter „Alle SDRs“ siehst und bearbeitest du auch die Kontakte anderer.',
-    tagMeaning:'Tags — deine eigenen Labels', tagExpl:'Frei vergebbare Labels für einen Kontakt, zusätzlich zum automatischen Direkt-/Partner-Typ, zum Gruppieren oder Filtern — z. B. Priorität, Branche oder Kampagne. Bearbeite sie am Lead; filtere über das Dropdown „Alle Tags“. Sie werden in Google Sheets gespeichert.',
-    whSdrTagWhen:'Beim Speichern / Import', whSdrTagDoes:'Besitzer (sdr) und Tags wandern mit jedem Lead in Google Sheets und zurück (kein eigener Webhook).',
+    tagMeaning:'Kampagne — gruppiert dein Outreach', tagExpl:'Jeder Lead gehört zu mindestens einer Kampagne — dem Outreach, aus dem er stammt (z. B. „Q3-Jobwechsler“, ein Event, ein Branchen-Push). Wähle beim Hinzufügen eine bestehende Kampagne oder gib eine neue ein; filtere über das Dropdown „Alle Kampagnen“. Gespeichert in der Spalte „tags“ in Google Sheets.',
+    whSdrTagWhen:'Beim Speichern / Import', whSdrTagDoes:'Besitzer (sdr) und Kampagne (Spalte „tags“) wandern mit jedem Lead in Google Sheets und zurück (kein eigener Webhook).',
     // ── v5: KI-Assistenz + Coach ──
     composeAiTools:'KI-Helfer', aiWorking:'⏳ Arbeite…',
     aiImprove:'✨ Verbessern', aiShorter:'✂️ Kürzer', aiWarmer:'☀️ Wärmer', aiPersonal:'💬 Persönlicher', aiQuestion:'❓ Frage ergänzen',
@@ -832,7 +833,7 @@ const I18N = {
     whAiWhen:'Bij “Bericht sturen”', whAiDoes:'Genereer een gepersonaliseerd conceptbericht met AI i.p.v. een vast sjabloon.',
     whPdWhen:'Bij “Lead” / knop', whPdDoes:'Maak een Persoon + Organisatie + Deal in Pipedrive, met contextnotitie over de baanwissel.',
     whEnrichWhen:'Na import', whEnrichDoes:'Verrijk een lead (bedrijfsgrootte, sector, e-mail) uit een externe bron.',
-    whTagWhen:'Handmatig / automatisch', whTagDoes:'Voeg eigen tags toe (bijv. prioriteit, sector, campagne) naast het lead-type.',
+    whTagWhen:'Bij toevoegen / scrapen', whTagDoes:'Elke lead valt onder een campagne (de outreach waar hij vandaan komt). Gekozen bij toevoegen/scrapen; opgeslagen in de kolom “tags”.',
     // ── v2 ──
     pdAdd:'➕ Pipedrive', pdConfirm:'Een Pipedrive-deal aanmaken voor {name}?', pdSyncAsk:'{name} staat nog niet in Pipedrive. Nu de deal aanmaken?',
     pdAdding:'⏳ Toevoegen aan Pipedrive…', pdAdded:'✅ Toegevoegd aan Pipedrive', pdFail:'❌ Pipedrive mislukt: ', pdAlready:'In Pipedrive ✓',
@@ -853,11 +854,11 @@ const I18N = {
     identityTitle:'Wie ben je?', identityIntro:'Kies je naam. Nieuwe contacten die je toevoegt of scrapet worden aan jou toegewezen. Je kunt dit altijd wijzigen via de chip rechtsboven.',
     identityTip:'Je identiteit — klik om te wijzigen', identitySet:'Naam kiezen',
     fSdr:'Toegewezen aan (SDR)', sdrHint:'Een contact kan bij meerdere personen horen — vink iedereen aan die verantwoordelijk is.',
-    fTags:'Tags', tagsHint:'Komma-gescheiden, bijv. prioriteit, fintech, event.',
-    allSdr:'Alle SDR\'s', unassignedSdr:'Niet toegewezen', allTags:'Alle tags', untagged:'Zonder tag',
+    fTags:'Campagne', tagsHint:'Kies een bestaande campagne of typ een nieuwe. Minstens één campagne is verplicht; scheid meerdere met komma\'s.', campaignRequired:'Kies minstens één campagne voor deze lead.',
+    allSdr:'Alle SDR\'s', unassignedSdr:'Niet toegewezen', allTags:'Alle campagnes', untagged:'Zonder campagne',
     sdrMeaning:'SDR — van wie het contact is', sdrExpl:'Na het invoeren van de sleutel kies je wie je bent. Contacten die je toevoegt of scrapet krijgen jouw naam (kolom “sdr” in Google Sheets). Een contact kan meerdere eigenaren hebben. Met het filter “Alle SDR’s” bekijk en bewerk je ook de contacten van anderen.',
-    tagMeaning:'Tags — je eigen labels', tagExpl:'Vrije labels die je een contact geeft, naast het automatische direct/partner-type, om te groeperen of filteren — bijv. prioriteit, sector of campagne. Bewerk ze op een lead; filter met het dropdown “Alle tags”. Ze worden opgeslagen in Google Sheets.',
-    whSdrTagWhen:'Bij Opslaan / import', whSdrTagDoes:'Eigenaar (sdr) en tags reizen met elke lead mee naar Google Sheets en terug (geen aparte webhook).',
+    tagMeaning:'Campagne — groepeer je outreach', tagExpl:'Elke lead hoort bij minstens één campagne — de outreach waar hij vandaan komt (bijv. “Q3-baanwisselaars”, een event, een sector-push). Kies bij het toevoegen een bestaande campagne of typ een nieuwe; filter met het dropdown “Alle campagnes”. Opgeslagen in de kolom “tags” in Google Sheets.',
+    whSdrTagWhen:'Bij Opslaan / import', whSdrTagDoes:'Eigenaar (sdr) en campagne (de kolom “tags”) reizen met elke lead mee naar Google Sheets en terug (geen aparte webhook).',
     // ── v5: AI-hulp + coach ──
     composeAiTools:'AI-hulp', aiWorking:'⏳ Bezig…',
     aiImprove:'✨ Verbeteren', aiShorter:'✂️ Korter', aiWarmer:'☀️ Warmer', aiPersonal:'💬 Persoonlijker', aiQuestion:'❓ Vraag erbij',
@@ -1559,7 +1560,11 @@ function modalHTML(l){
     <div class="field"><label>${t('fSdr')}</label>
       <div class="sdr-pick" id="f-sdr">${USERS.map(u=>{ const on=sdrSel.includes(u.id); return `<label class="sdr-opt${on?' on':''}"><input type="checkbox" value="${escA(u.id)}" ${on?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${esc(userLabel(u.id))}</label>`; }).join('')}</div>
       <div class="hint">${t('sdrHint')}</div></div>
-    <div class="field"><label>${t('fTags')}</label><input id="f-tags" value="${escA((l?.tags||[]).join(', '))}"><div class="hint">${t('tagsHint')}</div></div>
+    <div class="field"><label>${t('fTags')} <span style="color:var(--red-text)">*</span></label>
+      <input id="f-tags" value="${escA((l?.tags||[]).join(', '))}" list="f-campaign-list" autocomplete="off" placeholder="${escA(t('fTags'))}">
+      <datalist id="f-campaign-list">${allTags().map(tg=>`<option value="${escA(tg)}"></option>`).join('')}</datalist>
+      ${allTags().length?`<div class="campaign-suggest">${allTags().map(tg=>{ const safe=String(tg).replace(/["'\\<>]/g,''); return `<span class="tag-chip" onclick="addCampaignToForm('${safe}')">${esc(tg)}</span>`; }).join('')}</div>`:''}
+      <div class="hint">${t('tagsHint')}</div></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" onclick="${l?`saveLead('${l.id}')`:'addLead()'}">✓ ${l?t('save'):t('add')}</button></div>
   </div></div>`;
 }
@@ -1567,8 +1572,10 @@ function readForm(){ return { name:val('f-name'), title:val('f-title'), oldCompa
 function readSdr(){ return Array.from(document.querySelectorAll('#f-sdr input:checked')).map(c=>c.value); }
 function readTags(){ return val('f-tags').split(',').map(s=>s.trim()).filter(Boolean); }
 function val(id){ return document.getElementById(id).value.trim(); }
-function addLead(){ const f=readForm(); if(!f.name){ alert(t('nameRequired')); return; } leads.unshift({id:uid(),...f,status:'new',manualType:null,source:'manual',messagesSent:[]}); markDirty(); closeModal(); render(); }
-function saveLead(id){ const l=leads.find(x=>x.id===id); if(!l)return; Object.assign(l,readForm()); markDirty(); closeModal(); render(); }
+// add a campaign chip to the modal's comma-separated field (skip if already present, case-insensitive)
+function addCampaignToForm(name){ const inp=document.getElementById('f-tags'); if(!inp) return; const cur=inp.value.split(',').map(s=>s.trim()).filter(Boolean); if(!cur.some(c=>c.toLowerCase()===name.toLowerCase())) cur.push(name); inp.value=cur.join(', '); inp.focus(); }
+function addLead(){ const f=readForm(); if(!f.name){ alert(t('nameRequired')); return; } if(!f.tags.length){ alert(t('campaignRequired')); document.getElementById('f-tags').focus(); return; } leads.unshift({id:uid(),...f,status:'new',manualType:null,source:'manual',messagesSent:[]}); markDirty(); closeModal(); render(); }
+function saveLead(id){ const l=leads.find(x=>x.id===id); if(!l)return; const f=readForm(); if(!f.tags.length){ alert(t('campaignRequired')); document.getElementById('f-tags').focus(); return; } Object.assign(l,f); markDirty(); closeModal(); render(); }
 function deleteLead(id){ if(!confirm(t('delConfirm')))return; const ids=new Set(leadGroupOf(id).map(x=>x.id)); leads=leads.filter(x=>!ids.has(x.id)); markDirty(); render(); }
 function toast(msg,err){ const el=document.createElement('div'); el.className='import-toast'; el.style.background=err?'#791F1F':'var(--text)'; el.textContent=msg; document.getElementById('toasts').appendChild(el); setTimeout(()=>el.remove(),3500); }
 
@@ -1619,7 +1626,7 @@ function tourInjectDemo(){
   leads.unshift({ id:TOUR_ID, name:t('tourDemoName'), title:t('tourDemoTitle'),
     oldCompany:t('tourDemoOld'), newCompany:t('tourDemoNew'), size:'25–100',
     url:'https://www.linkedin.com/in/demo', status:'new', notes:t('tourDemoNotes'),
-    manualType:null, source:'manual', pipedrive:'', sdr: me?[me]:[], tags:[], messagesSent:[], _demo:true });
+    manualType:null, source:'manual', pipedrive:'', sdr: me?[me]:[], tags:['Demo'], messagesSent:[], _demo:true });
 }
 function tourRemoveDemo(){ leads=leads.filter(l=>l.id!==TOUR_ID); }
 function tourDemoCard(){ return document.querySelector('[data-lead-id="'+TOUR_ID+'"]'); }
