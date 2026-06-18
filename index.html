@@ -297,6 +297,7 @@
   /* CSV/Excel import */
   .imp-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 28px; border: 2px dashed var(--border2); border-radius: 12px; cursor: pointer; background: var(--surface2); }
   .imp-drop:hover { border-color: var(--primary); background: var(--primary-bg); }
+  .imp-note { padding: 10px 12px; border-radius: 10px; background: var(--amber-bg); color: var(--amber-text); font-size: 12px; line-height: 1.5; }
   .imp-stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
   .imp-pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
   .imp-pill.ok { background: var(--green-bg); color: var(--green-text); }
@@ -1722,17 +1723,22 @@ function importDropHTML(){
       <div style="font-weight:600;margin-top:6px">${t('impPick')}</div>
       <div class="hint">${t('impFormats')}</div>
     </label>
-    <input id="imp-file" type="file" accept=".csv,.tsv,.txt,.xlsx" style="display:none" onchange="onImportFile(this)">
+    <input id="imp-file" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.numbers" style="display:none" onchange="onImportFile(this)">
+    <div id="imp-note" class="imp-note" style="display:none"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal()">${t('cancel')}</button></div>
   </div></div>`;
 }
+// .numbers is NOT a CSV — it's Apple's proprietary Snappy+protobuf package, not parseable
+// in vanilla JS without a heavy, brittle reverse-engineered reader. So we show clear export
+// guidance (persistent in-modal, not a fleeting toast) instead of attempting a flaky parse.
+function impShowNote(msg){ const n=document.getElementById('imp-note'); if(n){ n.textContent=msg; n.style.display='block'; } else toast(msg,true); }
 function onImportFile(input){
   const file=input.files&&input.files[0]; if(!file) return;
   const nm=file.name.toLowerCase();
   const done=p=>{ setSync(''); if(!p.headers.length||!p.rows.length){ toast(t('impEmpty'),true); return; } importLoaded(p,file.name); };
   const fail=e=>{ setSync(''); toast(t('impParseFail')+((e&&e.message)||e),true); };
-  if(nm.endsWith('.numbers')){ toast(t('impNumbers'),true); return; }
-  if(nm.endsWith('.xls')){ toast(t('impXls'),true); return; }
+  if(nm.endsWith('.numbers')){ impShowNote(t('impNumbers')); return; }
+  if(nm.endsWith('.xls')){ impShowNote(t('impXls')); return; }
   setSync(t('impReading'));
   if(nm.endsWith('.xlsx')){ const fr=new FileReader(); fr.onerror=()=>fail(fr.error); fr.onload=()=>parseXlsx(fr.result).then(done).catch(fail); fr.readAsArrayBuffer(file); }
   else { const fr=new FileReader(); fr.onerror=()=>fail(fr.error); fr.onload=()=>{ try{ done(parseDelimited(fr.result)); }catch(e){ fail(e); } }; fr.readAsText(file); }
