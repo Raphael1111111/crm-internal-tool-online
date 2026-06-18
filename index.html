@@ -626,7 +626,7 @@ const I18N = {
     impXls:'The old .xls format isn’t supported — open it and save as .xlsx or CSV first.',
     impMapTitle:'Check the import', impFile:'File', impRows:'rows', impColumn:'Column',
     impColName:'Name column', impColLinkedin:'LinkedIn URL column', impAuto:'Also imported',
-    impCampaignPh:'e.g. Webinar 02-06', impCampaignHint:'Every imported contact is filed under this campaign (required).',
+    impCampaignPh:'e.g. Webinar 02-06', impCampaignHint:'Pick an existing campaign (tap a chip below) or type a new one. It applies to all imported contacts (required).',
     impBack:'← Other file', impConfirm:'Import contacts',
     impWillAdd:'{n} will be added', impDup:'{n} already in the CRM (skipped)', impSkipped:'{n} skipped (no name or LinkedIn)',
     impMore:'+{n} more…', impNoneValid:'No row has both a name and a LinkedIn URL.',
@@ -767,7 +767,7 @@ const I18N = {
     impXls:'Das alte .xls-Format wird nicht unterstützt — bitte zuerst als .xlsx oder CSV speichern.',
     impMapTitle:'Import prüfen', impFile:'Datei', impRows:'Zeilen', impColumn:'Spalte',
     impColName:'Namens-Spalte', impColLinkedin:'LinkedIn-URL-Spalte', impAuto:'Ebenfalls übernommen',
-    impCampaignPh:'z. B. Webinar 02-06', impCampaignHint:'Alle importierten Kontakte erhalten diese Kampagne (Pflicht).',
+    impCampaignPh:'z. B. Webinar 02-06', impCampaignHint:'Wähle eine bestehende Kampagne (unten auf einen Chip tippen) oder gib eine neue ein. Gilt für alle importierten Kontakte (Pflicht).',
     impBack:'← Andere Datei', impConfirm:'Kontakte importieren',
     impWillAdd:'{n} werden hinzugefügt', impDup:'{n} bereits im CRM (übersprungen)', impSkipped:'{n} übersprungen (kein Name oder LinkedIn)',
     impMore:'+{n} weitere…', impNoneValid:'Keine Zeile hat sowohl Name als auch LinkedIn-URL.',
@@ -908,7 +908,7 @@ const I18N = {
     impXls:'Het oude .xls-formaat wordt niet ondersteund — sla het eerst op als .xlsx of CSV.',
     impMapTitle:'Controleer de import', impFile:'Bestand', impRows:'rijen', impColumn:'Kolom',
     impColName:'Naam-kolom', impColLinkedin:'LinkedIn-URL-kolom', impAuto:'Ook geïmporteerd',
-    impCampaignPh:'bijv. Webinar 02-06', impCampaignHint:'Alle geïmporteerde contacten krijgen deze campagne (verplicht).',
+    impCampaignPh:'bijv. Webinar 02-06', impCampaignHint:'Kies een bestaande campagne (tik op een chip hieronder) of typ een nieuwe. Geldt voor alle geïmporteerde contacten (verplicht).',
     impBack:'← Ander bestand', impConfirm:'Contacten importeren',
     impWillAdd:'{n} worden toegevoegd', impDup:'{n} al in het CRM (overgeslagen)', impSkipped:'{n} overgeslagen (geen naam of LinkedIn)',
     impMore:'+{n} meer…', impNoneValid:'Geen enkele rij heeft zowel een naam als een LinkedIn-URL.',
@@ -1755,11 +1755,7 @@ function importLoaded(parsed,fileName){
   const urlIdx=impFind(H,h=>h.includes('linkedin'));
   const titleIdx=impFind(H,h=>h.includes('jobtitle')||h.includes('jobtitel')||h.includes('function')||h.includes('funktion')||h.includes('functie')||h==='title'||h==='titel'||h.includes('role')||h.includes('rolle')||h.includes('position'));
   const companyIdx=impFind(H,h=>h.includes('company')||h.includes('bedrijf')||h.includes('organi')||h.includes('employer')||h.includes('firma')||h.includes('werkgever')||h==='account');
-  const skip=new Set([titleIdx,companyIdx,urlIdx,fi,la,full]);
-  const notesCols=[];
-  H.forEach((h,i)=>{ if(skip.has(i)) return; const n=NORMH(h);
-    if(['email','mail','phone','tel','mobile','mobiel','location','city','country','land','plaats','woonplaats','headline','regio','region','ort','standort','stadt','stad','adres','address'].some(p=>n.includes(p))) notesCols.push(i); });
-  importState={ headers:H, rows:parsed.rows, fileName, nameCands, nameId, urlIdx, titleIdx, companyIdx, notesCols };
+  importState={ headers:H, rows:parsed.rows, fileName, nameCands, nameId, urlIdx, titleIdx, companyIdx };
   document.getElementById('modal').innerHTML=importMapHTML();
   renderImportPreview();
 }
@@ -1767,11 +1763,6 @@ function importMapHTML(){
   const S=importState, H=S.headers;
   const colOpts=sel=>H.map((h,i)=>`<option value="${i}" ${i===sel?'selected':''}>${esc(h||(t('impColumn')+' '+(i+1)))}</option>`).join('');
   const nameOpts=S.nameCands.map(c=>`<option value="${escA(c.id)}" ${c.id===S.nameId?'selected':''}>${esc(c.label)}</option>`).join('');
-  const auto=[];
-  if(S.titleIdx>=0) auto.push(t('fTitle')+' ← '+esc(H[S.titleIdx]));
-  if(S.companyIdx>=0) auto.push(t('fNew')+' ← '+esc(H[S.companyIdx]));
-  if(S.notesCols.length) auto.push(t('fNotes')+' ← '+S.notesCols.map(i=>esc(H[i])).join(', '));
-  auto.push(t('fSdr')+' ← '+(getCurrentUser()?esc(userLabel(getCurrentUser())):t('unassignedSdr')));
   return `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal wide">
     <h2>⬆️ ${t('impMapTitle')}</h2>
     <div class="hint" style="margin-bottom:12px">${t('impFile')}: <b>${esc(S.fileName)}</b> · ${S.rows.length} ${t('impRows')}</div>
@@ -1779,7 +1770,6 @@ function importMapHTML(){
       <select onchange="importState.nameId=this.value;renderImportPreview()">${nameOpts}</select></div>
     <div class="field"><label>${t('impColLinkedin')} <span style="color:var(--red-text)">*</span></label>
       <select onchange="importState.urlIdx=+this.value;renderImportPreview()">${colOpts(S.urlIdx)}</select></div>
-    ${auto.length?`<div class="hint" style="margin:-4px 0 12px">${t('impAuto')}: ${auto.join(' · ')}</div>`:''}
     <div class="field"><label>${t('fTags')} <span style="color:var(--red-text)">*</span></label>
       <input id="imp-campaign" list="imp-camp-list" autocomplete="off" placeholder="${escA(t('impCampaignPh'))}" oninput="renderImportPreview()">
       <datalist id="imp-camp-list">${allTags().map(tg=>`<option value="${escA(tg)}"></option>`).join('')}</datalist>
@@ -1795,8 +1785,21 @@ function importMapHTML(){
 }
 function impAddCampaign(name){ const inp=document.getElementById('imp-campaign'); if(!inp) return; const cur=inp.value.split(',').map(s=>s.trim()).filter(Boolean); if(!cur.some(c=>c.toLowerCase()===name.toLowerCase())) cur.push(name); inp.value=cur.join(', '); renderImportPreview(); }
 function importNameGet(){ const c=(importState.nameCands||[]).find(x=>x.id===importState.nameId); return c?c.get:(()=>''); }
+// Columns folded into `notes`: every column except the name column(s), the LinkedIn
+// column and the columns already mapped to title/company — with email column(s) FIRST,
+// then the remaining columns in their original order. Recomputed from the live mapping
+// so it stays correct when the SDR overrides the Name / LinkedIn selects.
+function importNotesCols(){
+  const S=importState, used=new Set([S.urlIdx,S.titleIdx,S.companyIdx]);
+  const nid=S.nameId||'';
+  if(nid.slice(0,2)==='c:') nid.slice(2).split(',').forEach(x=>used.add(+x));
+  else if(nid.slice(0,4)==='col:') used.add(+nid.slice(4));
+  const cols=[]; S.headers.forEach((h,i)=>{ if(!used.has(i)) cols.push(i); });
+  const isMail=i=>{ const n=NORMH(S.headers[i]); return n.includes('email')||n.includes('mail'); };
+  return cols.filter(isMail).concat(cols.filter(i=>!isMail(i)));
+}
 function importBuild(){
-  const S=importState, getName=importNameGet();
+  const S=importState, getName=importNameGet(), noteCols=importNotesCols();
   const inp=document.getElementById('imp-campaign');
   const campaign=((inp&&inp.value)||'').split(',').map(s=>s.trim()).filter(Boolean);
   const existing=new Set(leads.map(l=>normLi(l.url)).filter(Boolean));
@@ -1808,23 +1811,30 @@ function importBuild(){
     if(!key){ skipped++; return; }
     if(existing.has(key)||seen.has(key)){ dup++; return; }
     seen.add(key);
-    const notes=S.notesCols.map(i=>{ const v=impCell(r,i).trim(); return v?(S.headers[i]+': '+v):''; }).filter(Boolean).join('\n');
+    const notes=noteCols.map(i=>{ const v=impCell(r,i).trim(); return v?(S.headers[i]+': '+v):''; }).filter(Boolean).join('\n');
     valid.push({ name, url, title:impCell(r,S.titleIdx).trim(), newCompany:impCell(r,S.companyIdx).trim(), notes });
   });
   return { campaign, valid, skipped, dup };
 }
 function renderImportPreview(){
-  if(!importState) return; const box=document.getElementById('imp-preview'); if(!box) return;
+  if(!importState) return; const S=importState, box=document.getElementById('imp-preview'); if(!box) return;
   const b=importBuild(), go=document.getElementById('imp-go');
   if(go) go.disabled=!(b.campaign.length && b.valid.length);
-  const rowsH=b.valid.slice(0,8).map(l=>`<tr><td>${esc(l.name)}</td><td class="imp-url">${esc(l.url.replace(/^https?:\/\//,''))}</td><td>${esc(l.title||'—')}</td><td>${esc(l.newCompany||'—')}</td></tr>`).join('');
-  box.innerHTML=`<div class="imp-stats">
+  const auto=[];
+  if(S.titleIdx>=0) auto.push(t('fTitle')+' ← '+esc(S.headers[S.titleIdx]));
+  if(S.companyIdx>=0) auto.push(t('fNew')+' ← '+esc(S.headers[S.companyIdx]));
+  const ncols=importNotesCols();
+  if(ncols.length) auto.push(t('fNotes')+' ← '+ncols.map(i=>esc(S.headers[i]||(t('impColumn')+' '+(i+1)))).join(', '));
+  auto.push(t('fSdr')+' ← '+(getCurrentUser()?esc(userLabel(getCurrentUser())):t('unassignedSdr')));
+  const rowsH=b.valid.slice(0,8).map(l=>`<tr><td>${esc(l.name)}</td><td class="imp-url">${esc(l.url.replace(/^https?:\/\//,''))}</td><td>${esc(l.title||'—')}</td><td>${esc(l.newCompany||'—')}</td><td class="imp-url">${esc(l.notes?l.notes.replace(/\n/g,' · '):'—')}</td></tr>`).join('');
+  box.innerHTML=`<div class="hint" style="margin:0 0 10px">${t('impAuto')}: ${auto.join(' · ')}</div>
+    <div class="imp-stats">
       <span class="imp-pill ok">${t('impWillAdd',{n:b.valid.length})}</span>
       ${b.dup?`<span class="imp-pill warn">${t('impDup',{n:b.dup})}</span>`:''}
       ${b.skipped?`<span class="imp-pill muted">${t('impSkipped',{n:b.skipped})}</span>`:''}
     </div>
     ${b.valid.length
-      ?`<div class="imp-table-wrap"><table class="imp-table"><thead><tr><th>${t('fName')}</th><th>LinkedIn</th><th>${t('fTitle')}</th><th>${t('fNew')}</th></tr></thead><tbody>${rowsH}</tbody></table></div>${b.valid.length>8?`<div class="hint">${t('impMore',{n:b.valid.length-8})}</div>`:''}`
+      ?`<div class="imp-table-wrap"><table class="imp-table"><thead><tr><th>${t('fName')}</th><th>LinkedIn</th><th>${t('fTitle')}</th><th>${t('fNew')}</th><th>${t('fNotes')}</th></tr></thead><tbody>${rowsH}</tbody></table></div>${b.valid.length>8?`<div class="hint">${t('impMore',{n:b.valid.length-8})}</div>`:''}`
       :`<div class="hint">${t('impNoneValid')}</div>`}`;
 }
 async function importConfirm(){
