@@ -60,9 +60,10 @@
   .view.active { display: block; }
 
   /* ── Narrow: collapse the header into a burger menu before the action row would wrap.
-        The full labelled row needs ~1290px in the widest language (DE) with the longest name +
-        sync status, so collapse at 1320px to keep a safe margin. ── */
-  @media (max-width: 1320px) {
+        After trimming the bar (help moved to the ? FAB, env hidden on prod, status text and lock
+        removed) the full labelled row needs ~1165px in the widest language (DE, longest SDR name),
+        so collapse at 1200px to keep a safe margin. ── */
+  @media (max-width: 1200px) {
     .topbar { position: relative; padding: 0 14px; }
     .topbar-left { flex: 1; justify-content: space-between; gap: 12px; }
     .burger { display: inline-flex; }
@@ -79,8 +80,6 @@
     .topbar-actions .btn.icon-only { width: 100%; justify-content: center; }
     .save-wrap { justify-content: space-between; width: 100%; }
     .topbar-divider { display: none; }
-    .topbar-collapse .tbc-icon { padding: 0 14px; }
-    .topbar-collapse .tbc-icon .tbc-label { display: inline; }
   }
 
   /* Buttons */
@@ -92,10 +91,6 @@
   .btn.green:hover { background: var(--green-text); }
   .btn.sm { height: 30px; padding: 0 10px; font-size: 12px; }
   .btn.icon-only { width: 36px; padding: 0; justify-content: center; }
-  /* Refresh + "How it works" show icon-only in the desktop bar to keep the action row narrow;
-     their text labels return in the burger menu (where there is room). */
-  .tbc-icon { padding: 0 9px; }
-  .tbc-icon .tbc-label { display: none; }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .btn.danger:hover { background: var(--red-bg); color: var(--red-text); border-color: var(--red-text); }
   .btn.message-btn { background: var(--amber-bg); border-color: var(--amber-text); color: var(--amber-text); font-weight: 500; }
@@ -425,23 +420,18 @@
           <button class="nav-item" data-view="help" onclick="switchView('help')" data-i18n="navHelp"></button>
         </nav>
       <div class="topbar-actions">
-        <button class="btn sm tbc-icon" id="walkthrough-btn" onclick="openWalkthrough()" data-tip=""><span aria-hidden="true">❔</span><span class="tbc-label" data-i18n="howLabel"></span></button>
-        <button class="btn sm" id="env-toggle" onclick="toggleEnv()" data-tip=""></button>
+        <button class="btn sm" id="env-toggle" onclick="toggleEnv()" data-tip="" style="display:none"></button>
         <div class="save-wrap">
-          <span class="sync-status" id="sync-status"></span>
           <span class="save-dot" id="save-dot" data-tip=""></span>
           <button class="btn green" id="save-btn" onclick="syncToN8n()" data-tip="" data-i18n="saveBtn"></button>
         </div>
-        <button class="btn tbc-icon" onclick="reloadFromN8n()" data-tip=""><span aria-hidden="true">↻</span><span class="tbc-label" data-i18n="refreshLabel"></span></button>
+        <button class="btn" onclick="reloadFromN8n()" data-tip="" data-i18n="refreshBtn"></button>
         <button class="btn" onclick="openImport()" data-tip="" data-i18n="importBtn"></button>
         <button class="btn primary" onclick="openAdd()" data-tip="" data-i18n="addBtn"></button>
         <div class="topbar-divider"></div>
         <button class="btn sm user-chip" id="user-chip" onclick="openIdentityModal(false)" data-tip=""></button>
         <button class="btn icon-only" onclick="openSettings()" data-tip="" title="Settings">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        </button>
-        <button class="btn icon-only" onclick="lockAndReload()" data-tip="" title="Lock">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </button>
       </div>
       </div>
@@ -529,7 +519,7 @@ const I18N = {
     dashSdr:'SDR', dashAdded:'Contacts added', dashMessages:'Messages sent', dashDay:'Day',
     dashTotal:'Total', dashTotals:'Totals per SDR', dashDaily:'Per day per SDR', dashUnassigned:'Unassigned',
     dashNote:'“Added” is derived from when each contact first entered the system; messages are counted on their send date and credited to the contact’s owner(s). Only SDRs with activity in the period are shown.',
-    howItWorks:'❔ How it works', howLabel:'How it works', saveBtn:'💾 Save', refreshBtn:'↻ Refresh', refreshLabel:'Refresh', addBtn:'➕ Add lead',
+    howItWorks:'❔ How it works', saveBtn:'💾 Save', refreshBtn:'↻ Refresh', addBtn:'➕ Add lead',
     tourNext:'Next →', tourDoneBtn:'Finish ✓',
     tourDemoName:'Alex (demo contact)', tourDemoTitle:'Head of People', tourDemoOld:'StartupX', tourDemoNew:'NovaTech', tourDemoNotes:'📍 Berlin · just changed jobs · 🗣 German',
     tourAiDraft:'Hi Alex, congrats on the new role at NovaTech! 🎉 A team change is the perfect moment to rethink HR admin — at HoorayHR we make leave, contracts and onboarding effortless for teams your size. Open to a quick chat?',
@@ -563,7 +553,7 @@ const I18N = {
     delConfirm:'Delete lead? (removed on next Save)',
     refreshTip:'Re-pull all leads live from n8n.',
     addTip:'Manually add a single lead.', saveTip:'Send all your changes to n8n / Google Sheets.',
-    settingsTip:'Settings: language & environment.', lockTip:'Lock: clears the key and cached data.',
+    settingsTip:'Settings: language, environment & lock.', lockTip:'Lock: clears the key and cached data.', lockBtn:'Lock',
     envTipProd:'Now: Production webhook. Click for test.', envTipTest:'Now: Test webhook. Click for production.',
     howTip:'A step-by-step walkthrough of the two main workflows.',
     settingsTitle:'⚙️ Settings', language:'Language', environment:'Environment',
@@ -670,7 +660,7 @@ const I18N = {
     dashSdr:'SDR', dashAdded:'Kontakte hinzugefügt', dashMessages:'Nachrichten gesendet', dashDay:'Tag',
     dashTotal:'Gesamt', dashTotals:'Summen pro SDR', dashDaily:'Pro Tag pro SDR', dashUnassigned:'Ohne Besitzer',
     dashNote:'„Hinzugefügt“ wird daraus abgeleitet, wann ein Kontakt erstmals ins System kam; Nachrichten werden am Sendedatum gezählt und dem/den Besitzer(n) des Kontakts zugeschrieben. Es werden nur SDRs mit Aktivität im Zeitraum angezeigt.',
-    howItWorks:'❔ So funktioniert\'s', howLabel:'So funktioniert\'s', saveBtn:'💾 Speichern', refreshBtn:'↻ Aktualisieren', refreshLabel:'Aktualisieren', addBtn:'➕ Lead hinzufügen',
+    howItWorks:'❔ So funktioniert\'s', saveBtn:'💾 Speichern', refreshBtn:'↻ Aktualisieren', addBtn:'➕ Lead hinzufügen',
     tourNext:'Weiter →', tourDoneBtn:'Fertig ✓',
     tourDemoName:'Alex (Demo-Kontakt)', tourDemoTitle:'Head of People', tourDemoOld:'StartupX', tourDemoNew:'NovaTech', tourDemoNotes:'📍 Berlin · gerade Job gewechselt · 🗣 German',
     tourAiDraft:'Hallo Alex, herzlichen Glückwunsch zur neuen Rolle bei NovaTech! 🎉 Ein Teamwechsel ist der perfekte Moment, HR-Admin neu zu denken — bei HoorayHR machen wir Urlaub, Verträge und Onboarding für Teams eurer Größe mühelos. Lust auf einen kurzen Austausch?',
@@ -704,7 +694,7 @@ const I18N = {
     delConfirm:'Lead löschen? (wird beim nächsten Speichern entfernt)',
     refreshTip:'Alle Leads neu aus n8n laden.',
     addTip:'Einen einzelnen Lead manuell hinzufügen.', saveTip:'Alle Änderungen an n8n / Google Sheets senden.',
-    settingsTip:'Einstellungen: Sprache & Umgebung.', lockTip:'Sperren: löscht Schlüssel und Zwischenspeicher.',
+    settingsTip:'Einstellungen: Sprache, Umgebung & Sperren.', lockTip:'Sperren: löscht Schlüssel und Zwischenspeicher.', lockBtn:'Sperren',
     envTipProd:'Aktuell: Produktions-Webhook. Klick für Test.', envTipTest:'Aktuell: Test-Webhook. Klick für Produktion.',
     howTip:'Eine Schritt-für-Schritt-Anleitung der zwei Haupt-Workflows.',
     settingsTitle:'⚙️ Einstellungen', language:'Sprache', environment:'Umgebung',
@@ -811,7 +801,7 @@ const I18N = {
     dashSdr:'SDR', dashAdded:'Contacten toegevoegd', dashMessages:'Berichten verstuurd', dashDay:'Dag',
     dashTotal:'Totaal', dashTotals:'Totalen per SDR', dashDaily:'Per dag per SDR', dashUnassigned:'Geen eigenaar',
     dashNote:'“Toegevoegd” wordt afgeleid uit wanneer een contact voor het eerst in het systeem kwam; berichten worden geteld op verzenddatum en toegekend aan de eigenaar(s) van het contact. Alleen SDR’s met activiteit in de periode worden getoond.',
-    howItWorks:'❔ Hoe het werkt', howLabel:'Hoe het werkt', saveBtn:'💾 Opslaan', refreshBtn:'↻ Verversen', refreshLabel:'Verversen', addBtn:'➕ Lead toevoegen',
+    howItWorks:'❔ Hoe het werkt', saveBtn:'💾 Opslaan', refreshBtn:'↻ Verversen', addBtn:'➕ Lead toevoegen',
     tourNext:'Volgende →', tourDoneBtn:'Klaar ✓',
     tourDemoName:'Alex (democontact)', tourDemoTitle:'Head of People', tourDemoOld:'StartupX', tourDemoNew:'NovaTech', tourDemoNotes:'📍 Berlijn · net van baan gewisseld · 🗣 German',
     tourAiDraft:'Hoi Alex, gefeliciteerd met je nieuwe rol bij NovaTech! 🎉 Een teamwissel is hét moment om HR-administratie opnieuw te bekijken — bij HoorayHR maken we verlof, contracten en onboarding moeiteloos voor teams van jouw omvang. Zin in een kort gesprek?',
@@ -845,7 +835,7 @@ const I18N = {
     delConfirm:'Lead verwijderen? (verwijderd bij volgende Opslaan)',
     refreshTip:'Alle leads opnieuw live uit n8n halen.',
     addTip:'Handmatig één lead toevoegen.', saveTip:'Al je wijzigingen naar n8n / Google Sheets sturen.',
-    settingsTip:'Instellingen: taal & omgeving.', lockTip:'Vergrendelen: wist de sleutel en cache.',
+    settingsTip:'Instellingen: taal, omgeving & vergrendelen.', lockTip:'Vergrendelen: wist de sleutel en cache.', lockBtn:'Vergrendelen',
     envTipProd:'Nu: productie-webhook. Klik voor test.', envTipTest:'Nu: test-webhook. Klik voor productie.',
     howTip:'Een stapsgewijze uitleg van de twee hoofd-workflows.',
     settingsTitle:'⚙️ Instellingen', language:'Taal', environment:'Omgeving',
@@ -946,7 +936,7 @@ function setLang(l){ if(!I18N[l]) return; lang=l; localStorage.setItem(LANG_LS,l
 function applyI18n(){
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.getAttribute('data-i18n')); });
-  setTip('walkthrough-btn','howTip'); setTip('save-btn','saveTip');
+  setTip('save-btn','saveTip');
   const map = [['button[onclick="reloadFromN8n()"]','refreshTip'],['button[onclick="openImport()"]','importTip'],['button[onclick="openAdd()"]','addTip'],['button[onclick="openSettings()"]','settingsTip'],['button[onclick="lockAndReload()"]','lockTip']];
   map.forEach(([sel,key])=>{ const el=document.querySelector(sel); if(el) el.setAttribute('data-tip', t(key)); });
   const s=document.getElementById('search'); if(s) s.placeholder=t('searchPlaceholder');
@@ -968,7 +958,9 @@ function clearBridge(){ localStorage.removeItem(KEY_BRIDGE); localStorage.remove
 function toggleEnv(){ if(dirty && !confirm(t('switchEnv')+'? '+t('unsavedTip'))) return; setEnv(getEnv()==='prod'?'test':'prod'); if(getKey()) reloadFromN8n(); }
 function updateEnvUI(){
   const btn=document.getElementById('env-toggle');
-  if(btn){ const env=getEnv(); btn.textContent = env==='test'?'🧪 Test':'⚙️ Prod'; btn.classList.toggle('test',env==='test'); btn.setAttribute('data-tip', env==='test'?t('envTipTest'):t('envTipProd')); }
+  // Normal users are always on prod, so the env control is noise — hide it on prod and show it
+  // only as a "🧪 Test" warning when on the test backend (switching to test happens in Settings).
+  if(btn){ const test=getEnv()==='test'; btn.style.display=test?'':'none'; btn.textContent = test?'🧪 Test':'⚙️ Prod'; btn.classList.toggle('test',test); btn.setAttribute('data-tip', test?t('envTipTest'):t('envTipProd')); }
   const gn=document.getElementById('gate-env-note'); if(gn) gn.textContent = getEnv()==='test'?t('envTest'):t('envProd');
 }
 
@@ -1075,7 +1067,7 @@ async function persistTemplates(silentOk){
   try { await n8nCall('save-templates',{templates}); if(!silentOk) toast(t('tplSavedDb')); }
   catch(e){ if(!silentOk) toast(t('tplSaveFail')+e.message,true); throw e; }
 }
-function setSync(x){ document.getElementById('sync-status').textContent=x; }
+function setSync(x){ const el=document.getElementById('sync-status'); if(el) el.textContent=x; }
 function saveCache(){ try{ sessionStorage.setItem(CACHE_SS,JSON.stringify(leads)); sessionStorage.setItem(TPL_SS,JSON.stringify(templates)); }catch(e){} }
 function markDirty(){ dirty=true; updateSaveUI(); saveCache(); }
 function updateSaveUI(){ const d=document.getElementById('save-dot'); if(d){ d.classList.toggle('show',dirty); d.setAttribute('data-tip',t('unsavedTip')); } }
@@ -1882,7 +1874,10 @@ function openSettings(){
     <div class="field"><label>${t('environment')}</label>
       <select onchange="onEnvSelect(this.value)"><option value="prod" ${getEnv()==='prod'?'selected':''}>⚙️ Production</option><option value="test" ${getEnv()==='test'?'selected':''}>🧪 Test</option></select>
       <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5">${t('envExplain')}</div></div>
-    <div class="modal-actions"><button class="btn primary" onclick="closeModal()">${t('close')}</button></div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn danger" onclick="lockAndReload()" data-tip="${escA(t('lockTip'))}">🔒 ${t('lockBtn')}</button>
+      <button class="btn primary" onclick="closeModal()">${t('close')}</button>
+    </div>
   </div></div>`;
 }
 function onEnvSelect(v){ if(dirty && !confirm(t('unsavedTip')+'?')){ openSettings(); return; } setEnv(v); if(getKey()) reloadFromN8n(); }
