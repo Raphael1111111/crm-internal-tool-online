@@ -61,9 +61,9 @@
 
   /* ── Narrow: collapse the header into a burger menu before the action row would wrap.
         After trimming the bar (help moved to the ? FAB, env hidden on prod, status text and lock
-        removed) the full labelled row needs ~1165px in the widest language (DE, longest SDR name),
-        so collapse at 1200px to keep a safe margin. ── */
-  @media (max-width: 1200px) {
+        removed) and re-adding the "⇄ Signale" button, the full labelled row needs ~1280px in the
+        widest language (DE, longest SDR name), so collapse at 1320px to keep a safe margin. ── */
+  @media (max-width: 1320px) {
     .topbar { position: relative; padding: 0 14px; }
     .topbar-left { flex: 1; justify-content: space-between; gap: 12px; }
     .burger { display: inline-flex; }
@@ -334,6 +334,7 @@
 
   /* Merged-duplicate badge + foreign (other SDR) dimming */
   .dup-badge { font-size: 10px; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber-text); font-weight: 700; cursor: help; }
+  .fire-badge { font-size: 10px; padding: 1px 7px; border-radius: 999px; background: #FDE7D2; color: #9A3B12; font-weight: 700; cursor: help; }
   .card.foreign { opacity: .5; background: var(--surface2); }
   .card.foreign:hover { opacity: 1; }
   .kcard.foreign { opacity: .45; }
@@ -426,6 +427,7 @@
           <button class="btn green" id="save-btn" onclick="syncToN8n()" data-tip="" data-i18n="saveBtn"></button>
         </div>
         <button class="btn" onclick="reloadFromN8n()" data-tip="" data-i18n="refreshBtn"></button>
+        <button class="btn" onclick="pullSignals()" id="pull-btn" data-tip="" data-i18n="pullBtn"></button>
         <button class="btn" onclick="openImport()" data-tip="" data-i18n="importBtn"></button>
         <button class="btn primary" onclick="openAdd()" data-tip="" data-i18n="addBtn"></button>
         <div class="topbar-divider"></div>
@@ -617,6 +619,9 @@ const I18N = {
     allSdr:'All SDRs', unassignedSdr:'Unassigned', allTags:'All campaigns', untagged:'No campaign',
     // ── CSV / Excel import (frontend only) ──
     importBtn:'⬆️ Import', importTip:'Import contacts from a CSV or Excel file',
+    pullBtn:'⇄ Signals', pullTip:'Pull buying-signal tabs (signal_…) from the sheet and merge them into your leads',
+    pullLoading:'Pulling signals…', pullDone:'Signals: {a} new · {u} updated · {s} skipped', pullNone:'No signal tabs found', pullFail:'Could not pull signals: ',
+    fireTip:'{n} buying signals: {list}',
     impTitle:'Import contacts', impIntro:'Upload a CSV or Excel file. Every row that has a name and a LinkedIn URL becomes a lead — the rest is skipped. Other recognised columns (job title, company, email, phone, location) are carried over.',
     impPick:'Choose a CSV or Excel file', impFormats:'.csv or .xlsx · click to browse',
     impReading:'Reading file…', impEmpty:'No rows found in that file.', impParseFail:'Could not read the file: ',
@@ -758,6 +763,9 @@ const I18N = {
     allSdr:'Alle SDRs', unassignedSdr:'Nicht zugewiesen', allTags:'Alle Kampagnen', untagged:'Ohne Kampagne',
     // ── CSV / Excel import (frontend only) ──
     importBtn:'⬆️ Import', importTip:'Kontakte aus einer CSV- oder Excel-Datei importieren',
+    pullBtn:'⇄ Signale', pullTip:'Buying-Signal-Tabs (signal_…) aus dem Sheet holen und in deine Leads zusammenführen',
+    pullLoading:'Hole Signale…', pullDone:'Signale: {a} neu · {u} ergänzt · {s} übersprungen', pullNone:'Keine Signal-Tabs gefunden', pullFail:'Signale konnten nicht geholt werden: ',
+    fireTip:'{n} Buying-Signals: {list}',
     impTitle:'Kontakte importieren', impIntro:'Lade eine CSV- oder Excel-Datei hoch. Jede Zeile mit Name und LinkedIn-URL wird zu einem Lead — der Rest wird übersprungen. Weitere erkannte Spalten (Jobtitel, Firma, E-Mail, Telefon, Ort) werden übernommen.',
     impPick:'CSV- oder Excel-Datei wählen', impFormats:'.csv oder .xlsx · zum Auswählen klicken',
     impReading:'Datei wird gelesen…', impEmpty:'Keine Zeilen in der Datei gefunden.', impParseFail:'Datei konnte nicht gelesen werden: ',
@@ -899,6 +907,9 @@ const I18N = {
     allSdr:'Alle SDR\'s', unassignedSdr:'Niet toegewezen', allTags:'Alle campagnes', untagged:'Zonder campagne',
     // ── CSV / Excel import (frontend only) ──
     importBtn:'⬆️ Importeren', importTip:'Contacten importeren uit een CSV- of Excel-bestand',
+    pullBtn:'⇄ Signalen', pullTip:'Buying-signaal-tabs (signal_…) uit de sheet ophalen en samenvoegen met je leads',
+    pullLoading:'Signalen ophalen…', pullDone:'Signalen: {a} nieuw · {u} aangevuld · {s} overgeslagen', pullNone:'Geen signaal-tabs gevonden', pullFail:'Signalen ophalen mislukt: ',
+    fireTip:'{n} buying-signalen: {list}',
     impTitle:'Contacten importeren', impIntro:'Upload een CSV- of Excel-bestand. Elke rij met een naam en een LinkedIn-URL wordt een lead — de rest wordt overgeslagen. Andere herkende kolommen (functie, bedrijf, e-mail, telefoon, locatie) worden meegenomen.',
     impPick:'Kies een CSV- of Excel-bestand', impFormats:'.csv of .xlsx · klik om te kiezen',
     impReading:'Bestand wordt gelezen…', impEmpty:'Geen rijen gevonden in dat bestand.', impParseFail:'Bestand kon niet worden gelezen: ',
@@ -937,7 +948,7 @@ function applyI18n(){
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.getAttribute('data-i18n')); });
   setTip('save-btn','saveTip');
-  const map = [['button[onclick="reloadFromN8n()"]','refreshTip'],['button[onclick="openImport()"]','importTip'],['button[onclick="openAdd()"]','addTip'],['button[onclick="openSettings()"]','settingsTip'],['button[onclick="lockAndReload()"]','lockTip']];
+  const map = [['button[onclick="reloadFromN8n()"]','refreshTip'],['button[onclick="pullSignals()"]','pullTip'],['button[onclick="openImport()"]','importTip'],['button[onclick="openAdd()"]','addTip'],['button[onclick="openSettings()"]','settingsTip'],['button[onclick="lockAndReload()"]','lockTip']];
   map.forEach(([sel,key])=>{ const el=document.querySelector(sel); if(el) el.setAttribute('data-tip', t(key)); });
   const s=document.getElementById('search'); if(s) s.placeholder=t('searchPlaceholder');
   renderGateLang(); updateEnvUI(); updateSaveUI(); renderUserChip();
@@ -1054,6 +1065,71 @@ async function autoSync(){
   if(!getKey()) return;
   try { await n8nCall('sync',{leads:leads.filter(l=>!l._demo)}); dirty=false; updateSaveUI(); saveCache(); setSync(t('savedShort')); }
   catch(e){ setSync(t('saveErrShort')); /* stays dirty — manual Save still available */ }
+}
+
+// ── Pull buying-signal tabs (signal_…) from the sheet and MERGE them into leads ──
+// One person appearing in several signal_ tabs becomes ONE lead carrying every signal
+// as a campaign tag (🔥 when ≥2). Existing leads only gain new tags — never a status
+// downgrade — and each newly detected signal is logged in notes with the date, so the
+// history builds up over time. Re-pulling the same tabs adds nothing (idempotent).
+async function pullSignals(){
+  if(!getKey()) return;
+  if(tourActive) return;
+  if(dirty && !confirm(t('refreshDirty'))) return;
+  const btn=document.getElementById('pull-btn'); if(btn) btn.disabled=true;
+  setSync(t('pullLoading'));
+  try {
+    // Start from the fresh server copy so we don't recreate leads a teammate just added.
+    const listRes=await n8nCall('list');
+    leads=normalizeLeads(listRes.leads||[]); dirty=false;
+    const res=await n8nCall('pull-signals');
+    const rows=(res&&res.rows)||[];
+    const me=getCurrentUser();
+    const today=new Date().toISOString().slice(0,10);
+    // 1) group incoming rows by normalised LinkedIn URL → the set of signals per person
+    const groups=new Map(); let skipped=0;
+    rows.forEach(r=>{
+      const name=String(r.name||'').trim(), url=String(r.url||'').trim(), key=normLi(url);
+      const campaign=String(r.campaign||'').trim();
+      if(!name||!url||!key){ skipped++; return; }
+      let g=groups.get(key);
+      if(!g){ g={url,name,title:r.title||'',newCompany:r.newCompany||'',notes:r.notes||'',campaigns:new Set()}; groups.set(key,g); }
+      if(campaign) g.campaigns.add(campaign);
+    });
+    // 2) index current leads by URL, then create/union
+    const byUrl=new Map();
+    leads.forEach(l=>{ const k=normLi(l.url); if(k&&!byUrl.has(k)) byUrl.set(k,l); });
+    let added=0, updated=0;
+    groups.forEach((g,key)=>{
+      const campaigns=Array.from(g.campaigns);
+      const existing=byUrl.get(key);
+      if(existing){
+        const before=new Set(existing.tags||[]);
+        const fresh=campaigns.filter(c=>!before.has(c));
+        if(fresh.length){
+          // propagate the new tag(s) across the display-dedupe group so rows never diverge
+          leadGroupOf(existing.id).forEach(m=>fresh.forEach(c=>{ if(!(m.tags||[]).includes(c)) (m.tags=m.tags||[]).push(c); }));
+          const hist=fresh.map(c=>`🔖 ${c} (${today})`).join('\n');
+          existing.notes=existing.notes?(existing.notes+'\n'+hist):hist;
+          updated++;
+        }
+      } else {
+        const hist=campaigns.map(c=>`🔖 ${c} (${today})`).join('\n');
+        const notes=[g.notes,hist].filter(Boolean).join('\n');
+        const nl=normalizeLeads([{name:g.name,title:g.title,newCompany:g.newCompany,url:g.url,
+          status:'new',source:'waalaxy',sdr:me?[me]:[],tags:campaigns.slice(),notes}])[0];
+        leads.unshift(nl); byUrl.set(key,nl); added++;
+      }
+    });
+    render(); if(activeView==='messages') renderMessagesView();
+    if(added||updated){ markDirty(); await autoSync(); } else { updateSaveUI(); saveCache(); }
+    setSync(t('savedShort'));
+    toast(rows.length?t('pullDone',{a:added,u:updated,s:skipped}):t('pullNone'));
+  } catch(e){
+    setSync(t('loadErr'));
+    if(e.message==='401'){ toast(t('badKey'),true); lockAndReload(); }
+    else toast(t('pullFail')+e.message,true);
+  } finally { if(btn) btn.disabled=false; }
 }
 
 // ── templates: pulled from the DB via `list-templates` (the `list` action returns none), saved via `save-templates` ──
@@ -1264,9 +1340,12 @@ function render(){
 }
 function isForeign(l){ const me=getCurrentUser(); return !!me && !(l.sdr||[]).includes(me); }
 function dupBadge(l){ return l._dup?`<span class="dup-badge" data-tip="${escA(t('dupTip',{n:l._dupCount}))}">⧉ ${l._dupCount}×</span>`:''; }
+// 🔥 shown when a contact carries ≥2 campaign tags = multiple buying signals.
+function fireBadge(l){ const tg=(l.tags||[]).filter(Boolean); return tg.length>=2?`<span class="fire-badge" data-tip="${escA(t('fireTip',{n:tg.length,list:tg.join(', ')}))}">🔥 ${tg.length}</span>`:''; }
+function srcLabelOf(l){ return l.source==='salesnav'?'Sales Nav':l.source==='profile'?'LinkedIn':l.source==='manual'?'Manual':l.source==='import'?'Import':l.source==='waalaxy'?'Waalaxy':''; }
 function renderCard(l){
   const opts=STATUS_ORDER.map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${statusLabel(s)}</option>`).join('');
-  const srcLabel = l.source==='salesnav'?'Sales Nav':l.source==='profile'?'LinkedIn':l.source==='manual'?'Manual':'';
+  const srcLabel = srcLabelOf(l);
   return `<div class="card${isForeign(l)?' foreign':''}" data-lead-id="${escA(l.id)}">
       <div class="card-top">
         <div class="card-info">
@@ -1275,6 +1354,7 @@ function renderCard(l){
             <span class="${getLeadType(l)==='partner'?'lt-partner':'lt-direct'}" onclick="toggleLeadType('${l.id}')" style="cursor:pointer">${getLeadType(l)==='partner'?t('partnerLead'):t('directLead')}${l.manualType?' ✓':''}</span>
             ${srcLabel?`<span class="src-tag">${srcLabel}</span>`:''}
             ${dupBadge(l)}
+            ${fireBadge(l)}
           </div>
           <div class="card-title">${esc(l.title)}</div>
           <div class="card-move">
@@ -1313,9 +1393,9 @@ function renderBoard(list){
   }).join('');
 }
 function kcard(l){
-  const srcLabel = l.source==='salesnav'?'Sales Nav':l.source==='profile'?'LinkedIn':l.source==='manual'?'Manual':'';
+  const srcLabel = srcLabelOf(l);
   return `<div class="kcard${isForeign(l)?' foreign':''}" draggable="true" data-id="${l.id}" ondragstart="boardDragStart(event,'${l.id}')" ondragend="boardDragEnd(event)" ondblclick="editLead('${l.id}')">
-    <div class="kc-name">${esc(l.name)}${l._dup?` <span class="dup-badge">⧉ ${l._dupCount}</span>`:''}</div>
+    <div class="kc-name">${esc(l.name)}${l._dup?` <span class="dup-badge">⧉ ${l._dupCount}</span>`:''}${fireBadge(l)}</div>
     ${l.title?`<div class="kc-title">${esc(l.title)}</div>`:''}
     <div class="kc-co">${esc(l.newCompany||l.oldCompany||'')}</div>
     <div class="kc-foot">
