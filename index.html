@@ -508,7 +508,7 @@ const EXTENSION_ZIP_URL = 'chrome-extension.zip';
 // Default AI system prompt for message drafting (editable per request in the compose dialog).
 const AI_SYSTEM_PROMPT = 'You are a sales assistant for HoorayHR (HR software for SMBs). Write short, warm, personal LinkedIn outreach messages to people who recently changed jobs. Be human, never salesy, max 4 sentences. Reply ONLY with the message text, in the same language as the user instruction.';
 
-const KEY_SS='li_crm_n8n_key', CACHE_SS='li_crm_cache_v1', TPL_SS='li_crm_templates_v1';
+const KEY_SS='li_crm_n8n_key', CACHE_SS='li_crm_cache_v1', TPL_SS='li_crm_templates_v1', BASE_SS='li_crm_syncbase_v1';
 const ENV_LS='li_crm_env', LANG_LS='li_crm_lang';
 const KEY_BRIDGE='li_crm_bridge_key', ENV_BRIDGE='li_crm_bridge_env', USER_BRIDGE='li_crm_bridge_user';
 const USER_LS='li_crm_user';
@@ -692,6 +692,8 @@ const I18N = {
     hjAskPh:'e.g. What does the flame mean? When does someone become a “Lead”?',
     hjAskBtn:'Ask', hjAskBusy:'Thinking…', hjAskEmpty:'Type a question first.',
     hjRefTitle:'📚 Reference & details', hjTechTitle:'📄 Technical description (what the AI answers from)',
+    // ── v19: safe saving (delta sync + merge refresh) ──
+    keptLocal:'{n} unsaved local change(s) kept — press 💾 to save them.',
   },
   de: {
     _name:'Deutsch',
@@ -856,6 +858,8 @@ const I18N = {
     hjAskPh:'z. B. Was bedeutet die Flamme? Wann wird jemand zum „Lead“?',
     hjAskBtn:'Fragen', hjAskBusy:'Denke nach…', hjAskEmpty:'Gib zuerst eine Frage ein.',
     hjRefTitle:'📚 Referenz & Details', hjTechTitle:'📄 Technische Beschreibung (Grundlage der KI-Antworten)',
+    // ── v19: sicheres Speichern (Delta-Sync + Merge-Refresh) ──
+    keptLocal:'{n} ungespeicherte lokale Änderung(en) behalten — mit 💾 speichern.',
   },
   nl: {
     _name:'Nederlands',
@@ -1020,6 +1024,8 @@ const I18N = {
     hjAskPh:'bijv. Wat betekent het vlammetje? Wanneer wordt iemand een “Lead”?',
     hjAskBtn:'Vragen', hjAskBusy:'Denken…', hjAskEmpty:'Typ eerst een vraag.',
     hjRefTitle:'📚 Referentie & details', hjTechTitle:'📄 Technische beschrijving (basis van de AI-antwoorden)',
+    // ── v19: veilig opslaan (delta-sync + merge-refresh) ──
+    keptLocal:'{n} niet-opgeslagen lokale wijziging(en) behouden — druk op 💾 om ze op te slaan.',
   }
 };
 let lang = localStorage.getItem(LANG_LS) || 'en';
@@ -1030,8 +1036,18 @@ function setLang(l){ if(!I18N[l]) return; lang=l; localStorage.setItem(LANG_LS,l
 // ── Build info + release notes (the discreet footer line; click to open) ─────
 // Convention: whenever a new version ships, update BUILD and PREPEND a RELEASES entry
 // (notes are user-facing and trilingual — keep them short and non-technical).
-const BUILD={ v:'v18', ts:'2026-07-17T17:10:00+02:00' };
+const BUILD={ v:'v19', ts:'2026-07-17T17:50:00+02:00' };
 const RELEASES=[
+  { v:'v19', ts:'2026-07-17T17:50:00+02:00', notes:{
+    en:[ 'Fixed: statuses and logged messages could be reverted when an older CRM tab saved after you worked via the extension or a second tab. Saving now only writes the rows you actually changed.',
+         'Refresh is now always safe: it merges the latest server data with your unsaved edits instead of discarding one side — and tells you how many unsaved changes it kept.',
+         'A failed background save now shows a clear warning instead of failing silently.' ],
+    de:[ 'Behoben: Status und protokollierte Nachrichten konnten zurückspringen, wenn ein älterer CRM-Tab speicherte, nachdem du über die Extension oder einen zweiten Tab gearbeitet hast. Speichern schreibt jetzt nur noch die Zeilen, die du wirklich geändert hast.',
+         '„Aktualisieren“ ist jetzt immer sicher: Es führt den neuesten Server-Stand mit deinen ungespeicherten Änderungen zusammen, statt eine Seite zu verwerfen — und sagt dir, wie viele ungespeicherte Änderungen behalten wurden.',
+         'Ein fehlgeschlagenes Hintergrund-Speichern zeigt jetzt eine deutliche Warnung statt still zu scheitern.' ],
+    nl:[ 'Opgelost: statussen en gelogde berichten konden terugspringen wanneer een ouder CRM-tabblad opsloeg nadat je via de extensie of een tweede tabblad had gewerkt. Opslaan schrijft nu alleen de rijen die je echt hebt gewijzigd.',
+         'Verversen is nu altijd veilig: het voegt de nieuwste serverdata samen met je niet-opgeslagen wijzigingen in plaats van één kant weg te gooien — en meldt hoeveel niet-opgeslagen wijzigingen zijn behouden.',
+         'Een mislukte achtergrond-opslag toont nu een duidelijke waarschuwing in plaats van stil te falen.' ] } },
   { v:'v18', ts:'2026-07-17T17:10:00+02:00', notes:{
     en:[ 'Help & Process rebuilt: a step-by-step journey from Sales Navigator search to Pipedrive deal, with the interactive demo one click away.',
          'New on the help page: ask the CRM a question — the AI answers in your language, based on a built-in description of the whole process.',
@@ -1151,6 +1167,21 @@ document.getElementById('gate-key').addEventListener('keydown', e=>{ if(e.key===
 document.getElementById('gate-env-btn').addEventListener('click', ()=> setEnv(getEnv()==='prod'?'test':'prod'));
 applyI18n();
 
+// ── v19: per-lead sync baseline — the last-known SERVER state of every row ──────────────────
+// Fixes the lost-update bug: Save/autoSync used to push the WHOLE in-memory array and n8n's
+// sync overwrites each sheet row completely (appendOrUpdate by id) — so a stale tab silently
+// reverted rows that the extension, another tab or another SDR had changed in the meantime
+// (statuses fell back, logged messages vanished). Now every write sends ONLY the rows that were
+// actually edited in THIS tab (fingerprint differs from the baseline), and Refresh MERGES the
+// server state with local unsaved edits instead of discarding either side.
+let syncBase=new Map();
+function leadFingerprint(l){ return JSON.stringify([l.name,l.title,l.oldCompany,l.newCompany,l.size,l.url,l.status,l.notes,l.manualType,l.source,l.pipedrive,l.sdr,l.tags,l.messagesSent]); }
+function leadChanged(l){ return leadFingerprint(l)!==syncBase.get(l.id); }
+function changedLeads(){ return leads.filter(l=>!l._demo&&leadChanged(l)); }
+function saveBase(){ try{ sessionStorage.setItem(BASE_SS,JSON.stringify(Array.from(syncBase))); }catch(e){} }
+function rebaseSync(arr){ syncBase=new Map(arr.filter(l=>!l._demo).map(l=>[l.id,leadFingerprint(l)])); saveBase(); }
+function rebaseLeads(arr){ arr.forEach(l=>{ if(!l._demo) syncBase.set(l.id,leadFingerprint(l)); }); saveBase(); }
+
 async function unlock(){
   const key=document.getElementById('gate-key').value.trim();
   const errEl=document.getElementById('gate-err'); errEl.classList.remove('show');
@@ -1160,6 +1191,7 @@ async function unlock(){
     const result=await n8nCall('list',{},key);
     sessionStorage.setItem(KEY_SS,key);
     leads=normalizeLeads(result.leads||[]);
+    rebaseSync(leads);
     if(Array.isArray(result.templates)&&result.templates.length) templates=normTpls(result.templates);
     await loadTemplates(key);
     saveCache(); publishBridge(); showApp();
@@ -1172,8 +1204,12 @@ function showApp(){ document.getElementById('gate').style.display='none'; docume
   try {
     const cached=JSON.parse(sessionStorage.getItem(CACHE_SS)||'null');
     const tpl=JSON.parse(sessionStorage.getItem(TPL_SS)||'null');
+    const base=JSON.parse(sessionStorage.getItem(BASE_SS)||'null');
     if(tpl) templates=tpl;
-    if(cached){ leads=cached; showApp(); reloadFromN8n(true); } else { showApp(); reloadFromN8n(); }
+    if(base) syncBase=new Map(base);
+    // v19: unsaved edits in the cached copy are recognised (vs the persisted baseline) and kept —
+    // the silent refresh below MERGES them instead of discarding them like before.
+    if(cached){ leads=cached; dirty=changedLeads().length>0; updateSaveUI(); showApp(); reloadFromN8n(true); } else { showApp(); reloadFromN8n(); }
   } catch(e){}
 })();
 function lockAndReload(){ if(dirty && !confirm(t('unsavedTip')+'?')) return; sessionStorage.removeItem(KEY_SS); sessionStorage.removeItem(CACHE_SS); sessionStorage.removeItem(TPL_SS); clearBridge(); location.reload(); }
@@ -1191,16 +1227,24 @@ async function n8nCall(action,payload={},keyOverride){
 }
 async function reloadFromN8n(silent=false){
   if(!getKey()) return;
-  // Refresh overwrites the in-memory leads with the server copy — warn first if
-  // there are unsaved edits (Lock and Env-switch already guard this way).
-  if(!silent && dirty && !confirm(t('refreshDirty'))) return;
   setSync(t('loading'));
   try {
     const result=await n8nCall('list');
-    leads=normalizeLeads(result.leads||[]);
+    const server=normalizeLeads(result.leads||[]);
+    // v19: MERGE instead of overwrite — rows edited locally since the last sync (fingerprint
+    // differs from the baseline) survive the refresh; every untouched row takes the fresh server
+    // copy (so changes made by the extension / another tab / another SDR appear). Locally added
+    // rows the server doesn't know yet are kept on top. Refresh is now safe at any moment —
+    // the old "discard your unsaved edits?" confirm is gone on purpose.
+    const kept=new Map(changedLeads().map(l=>[l.id,l]));
+    const serverIds=new Set(server.map(l=>l.id));
+    leads=server.map(sl=>kept.get(sl.id)||sl);
+    kept.forEach((l,id)=>{ if(!serverIds.has(id)) leads.unshift(l); });
+    rebaseSync(server);
     if(Array.isArray(result.templates)&&result.templates.length) templates=normTpls(result.templates);
     await loadTemplates();
-    dirty=false;
+    dirty=kept.size>0;
+    if(!silent&&kept.size) toast(t('keptLocal',{n:kept.size}));
     // Always fold in the buying-signal tabs so Refresh shows the combined Leads + Signals
     // view: every signal_* row becomes a lead or adds a campaign tag. Best-effort — if the
     // pull-signals action isn't available yet, the refresh still succeeds with just the leads.
@@ -1216,17 +1260,30 @@ async function reloadFromN8n(silent=false){
 }
 async function syncToN8n(){
   if(!getKey()) return; const btn=document.getElementById('save-btn'); btn.disabled=true; setSync(t('saving'));
-  try { await n8nCall('sync',{leads:leads.filter(l=>!l._demo)}); await persistTemplates(true); dirty=false; updateSaveUI(); saveCache(); setSync(t('savedShort')); toast(t('saved')); }
+  try {
+    const ch=changedLeads();                       // v19: only rows edited in THIS tab — a stale
+    if(ch.length) await n8nCall('sync',{leads:ch}); // tab can no longer revert anyone else's rows
+    rebaseLeads(ch);
+    await persistTemplates(true);
+    dirty=changedLeads().length>0; updateSaveUI(); saveCache(); setSync(t('savedShort')); toast(t('saved'));
+  }
   catch(e){ setSync(t('saveErrShort')); toast(t('saveFail')+e.message,true); }
   finally { btn.disabled=false; }
 }
 // Silent background save after "committing" actions (message sent / Pipedrive deal
 // created) so a non-technical SDR can't lose them by forgetting the 💾 button or by
-// closing the tab. Edits/status drags still rely on the manual Save. No toast on success.
+// closing the tab. Edits/status drags still rely on the manual Save. No toast on success —
+// but a FAILURE now toasts loudly (v19): it used to only flip the tiny status text, and the
+// invisible failure + a later refresh was one way logged messages silently disappeared.
 async function autoSync(){
   if(!getKey()) return;
-  try { await n8nCall('sync',{leads:leads.filter(l=>!l._demo)}); dirty=false; updateSaveUI(); saveCache(); setSync(t('savedShort')); }
-  catch(e){ setSync(t('saveErrShort')); /* stays dirty — manual Save still available */ }
+  try {
+    const ch=changedLeads();                       // v19: delta only, same as syncToN8n
+    if(ch.length) await n8nCall('sync',{leads:ch});
+    rebaseLeads(ch);
+    dirty=changedLeads().length>0; updateSaveUI(); saveCache(); setSync(t('savedShort'));
+  }
+  catch(e){ setSync(t('saveErrShort')); toast(t('saveFail')+e.message,true); /* stays dirty — manual Save still available */ }
 }
 
 // ── Merge buying-signal rows (from the pull-signals action) into the in-memory leads ──
